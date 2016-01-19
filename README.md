@@ -24,5 +24,5 @@ These directories will be auto created when build.
 
 It's enough, if your code or resource change, just execute build.sh to rebuild your project.
 
-If you want to put image in 'res', read [this](https://github.com/linfaxin/AndroidUI4Web-HelloWorld/tree/master/sample/res/image) for more information.
+If you want to put image in 'res', read [this](https://github.com/linfaxin/AndroidUI4Web-HelloWorld/tree/master/res/image) for more information.
 
