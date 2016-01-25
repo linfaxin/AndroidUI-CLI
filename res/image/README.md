@@ -9,6 +9,4 @@ Use in js: {packageName}.R.image.xxx
 
 Don't put large images here, don't forget to compress the image.
 
-If you don't want the image files to be built into js, you can put them to 'assets', and load with url like : 'assets/xxx.png'.
-
-Note: not support .9.png yet, will to implement it later.
+If you don't want the image files to be built into js, you can put them to 'assets', and load with url like : 'assets/xxx.png'
