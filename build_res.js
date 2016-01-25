@@ -135,7 +135,7 @@ function buildLayout(){
                 definedIds[id] = id;
             }
 
-            //remove xmlns & xmlns, no need when run
+            //remove xmlns & xmlns:android, no need when run
             ele.removeAttribute('xmlns');
             ele.removeAttribute('xmlns:android');
 

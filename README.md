@@ -9,6 +9,7 @@ If you want to create a new AndroidUI project, these files you should copy to:
 1. build.sh : to build the project, you should change the 'packageName' defined in the file. Open the file to see detail.
 2. build_res.js : pack resource into js, execute by nodejs, call by build.sh.
 3. tsconfig.json : typescript's convert config.
+3. package.json : node package manager(npm)'s config.
 
 
 You may need to create these directories:
