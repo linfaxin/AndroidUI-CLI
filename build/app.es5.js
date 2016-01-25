@@ -16,7 +16,9 @@ var my;
     (function (app) {
         var R;
         (function (R) {
-            R.id = {};
+            R.id = {
+                "textView": "textView"
+            };
         })(R = app.R || (app.R = {}));
     })(app = my.app || (my.app = {}));
 })(my || (my = {}));
@@ -27,7 +29,7 @@ var my;
         var R;
         (function (R) {
             var _layout_data = {
-                "activity_main": "<FrameLayout xmlns=\"android\" xmlns:android=\"http://schemas.android.com/apk/res/android\">\n    <TextView\n            android:id=\"textView\"\n            android:text=\"Hello world\"\n            android:gravity=\"center\"\n            android:textSize=\"20sp\"\n    />\n</FrameLayout>"
+                "activity_main": "<framelayout>\n    <textview android:text=\"Hello world\" android:gravity=\"center\" android:textSize=\"20sp\" id=\"textView\"></textview>\n</framelayout>"
             };
             var _tempDiv = document.createElement('div');
 

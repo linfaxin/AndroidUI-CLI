@@ -146,8 +146,7 @@ function buildLayout(){
 
     function writeToIdFile(){
         var str =
-            `///<reference path="${SDKReferencePath}"/>
-module ${packageName}.R {
+            `module ${packageName}.R {
     export var id = ${JSON.stringify(definedIds, null, 8)};
 }`;
         fs.writeFile('gen/R/id.ts', str, 'utf-8');

@@ -1,7 +1,7 @@
 ///<reference path="../../androidui-sdk/android-ui.d.ts"/>
 module my.app.R {
     const _layout_data = {
-        "activity_main": "<FrameLayout xmlns=\"android\" xmlns:android=\"http://schemas.android.com/apk/res/android\">\n    <TextView\n            android:id=\"textView\"\n            android:text=\"Hello world\"\n            android:gravity=\"center\"\n            android:textSize=\"20sp\"\n    />\n</FrameLayout>"
+        "activity_main": "<framelayout>\n    <textview android:text=\"Hello world\" android:gravity=\"center\" android:textSize=\"20sp\" id=\"textView\"></textview>\n</framelayout>"
 };
     const _tempDiv = document.createElement('div');
 
