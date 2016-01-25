@@ -1,12 +1,12 @@
 /*
  * AndroidUI4Web: https://github.com/linfaxin/AndroidUI4Web
- * version: 0.1.1
+ * version: 0.2.0
  * release type: Pre-release
- * release date: 2016-01-19
+ * release date: 2016-01-25
  */
 var androidui;
 (function (androidui) {
-    androidui.sdk_version = '0.1.1';
+    androidui.sdk_version = '0.2.0';
 })(androidui || (androidui = {}));
 /**
  * Created by linfaxin on 15/10/28.
@@ -2109,16 +2109,21 @@ var android;
 /**
  * Created by linfaxin on 15/12/11.
  */
+///<reference path="../../android/graphics/Rect.ts"/>
+///<reference path="../../android/graphics/Color.ts"/>
 var androidui;
 (function (androidui) {
     var image;
     (function (image) {
+        var Rect = android.graphics.Rect;
+        var Color = android.graphics.Color;
         class NetImage {
             constructor(src, overrideImageRatio) {
                 this.mImageWidth = 0;
                 this.mImageHeight = 0;
                 this.mOnLoads = new Set();
                 this.mOnErrors = new Set();
+                this.mImageLoaded = false;
                 this.init(src);
                 this.mOverrideImageRatio = overrideImageRatio;
             }
@@ -2127,16 +2132,16 @@ var androidui;
                 this.src = src;
             }
             createImage() {
-                this.platformImage = new Image();
+                this.browserImage = new Image();
             }
             loadImage() {
-                this.platformImage.src = this.mSrc;
-                this.platformImage.onload = () => {
-                    this.mImageWidth = this.platformImage.width;
-                    this.mImageHeight = this.platformImage.height;
+                this.browserImage.src = this.mSrc;
+                this.browserImage.onload = () => {
+                    this.mImageWidth = this.browserImage.width;
+                    this.mImageHeight = this.browserImage.height;
                     this.fireOnLoad();
                 };
-                this.platformImage.onerror = () => {
+                this.browserImage.onerror = () => {
                     this.mImageWidth = this.mImageHeight = 0;
                     this.fireOnError();
                 };
@@ -2158,7 +2163,7 @@ var androidui;
                 return this.mImageHeight;
             }
             getImageRatio() {
-                if (this.mOverrideImageRatio != null)
+                if (this.mOverrideImageRatio)
                     return this.mOverrideImageRatio;
                 let url = this.src;
                 if (!url)
@@ -2169,6 +2174,8 @@ var androidui;
                 if (idx > 0) {
                     url = url.substring(0, idx);
                 }
+                if (url.endsWith('.9'))
+                    url = url.substring(0, url.length - 2);
                 if (url.endsWith('@2x'))
                     return 2;
                 if (url.endsWith('@3x'))
@@ -2177,14 +2184,21 @@ var androidui;
                     return 4;
                 if (url.endsWith('@5x'))
                     return 5;
+                if (url.endsWith('@6x'))
+                    return 6;
                 return 1;
             }
+            isImageLoaded() {
+                return this.mImageLoaded;
+            }
             fireOnLoad() {
+                this.mImageLoaded = true;
                 for (let load of this.mOnLoads) {
                     load();
                 }
             }
             fireOnError() {
+                this.mImageLoaded = false;
                 for (let error of this.mOnErrors) {
                     error();
                 }
@@ -2206,6 +2220,31 @@ var androidui;
                 }
             }
             recycle() {
+            }
+            getPixels(bound, callBack) {
+                if (!callBack)
+                    return;
+                let canvasEle = document.createElement('canvas');
+                if (!bound)
+                    bound = new Rect(0, 0, this.width, this.height);
+                if (bound.isEmpty()) {
+                    callBack([]);
+                    return;
+                }
+                let w = bound.width();
+                let h = bound.height();
+                canvasEle.width = w;
+                canvasEle.height = h;
+                let canvas = canvasEle.getContext('2d');
+                canvas.drawImage(this.browserImage, bound.left, bound.top, w, h, 0, 0, w, h);
+                let data = canvas.getImageData(0, 0, w, h).data;
+                let colorData = [];
+                for (let i = 0; i < data.length; i += 4) {
+                    colorData.push(Color.rgba(data[i], data[i + 1], data[i + 2], data[i + 3]));
+                }
+                callBack(colorData);
+                canvasEle.width = 0;
+                canvasEle.height = 0;
             }
         }
         image.NetImage = NetImage;
@@ -2450,7 +2489,7 @@ var android;
                     return !this.mCurrentClip.intersects(left, t, right, bottom);
                 }
             }
-            drawCanvas(canvas, offsetX, offsetY) {
+            drawCanvas(canvas, offsetX = 0, offsetY = 0) {
                 this.drawCanvasImpl(canvas, offsetX, offsetY);
             }
             drawCanvasImpl(canvas, offsetX, offsetY) {
@@ -2469,20 +2508,20 @@ var android;
             drawImageImpl(image, srcRect, dstRect) {
                 if (!dstRect) {
                     if (!srcRect) {
-                        this._mCanvasContent.drawImage(image.platformImage, 0, 0);
+                        this._mCanvasContent.drawImage(image.browserImage, 0, 0);
                     }
                     else {
-                        this._mCanvasContent.drawImage(image.platformImage, srcRect.left, srcRect.top, srcRect.width(), srcRect.height(), 0, 0, image.platformImage.width, image.platformImage.height);
+                        this._mCanvasContent.drawImage(image.browserImage, srcRect.left, srcRect.top, srcRect.width(), srcRect.height(), 0, 0, image.browserImage.width, image.browserImage.height);
                     }
                 }
                 else {
                     if (dstRect.isEmpty())
                         return;
                     if (!srcRect) {
-                        this._mCanvasContent.drawImage(image.platformImage, dstRect.left, dstRect.top, dstRect.width(), dstRect.height());
+                        this._mCanvasContent.drawImage(image.browserImage, dstRect.left, dstRect.top, dstRect.width(), dstRect.height());
                     }
                     else {
-                        this._mCanvasContent.drawImage(image.platformImage, srcRect.left, srcRect.top, srcRect.width(), srcRect.height(), dstRect.left, dstRect.top, dstRect.width(), dstRect.height());
+                        this._mCanvasContent.drawImage(image.browserImage, srcRect.left, srcRect.top, srcRect.width(), srcRect.height(), dstRect.left, dstRect.top, dstRect.width(), dstRect.height());
                     }
                 }
             }
@@ -4303,9 +4342,11 @@ var android;
     var R;
     (function (R) {
         const _layout_data = {
-            "alert_dialog": "\n<!--\n/*\n** Copyright 2010, The Android Open Source Project\n**\n** Licensed under the Apache License, Version 2.0 (the \"License\");\n** you may not use this file except in compliance with the License.\n** You may obtain a copy of the License at\n**\n**     http://www.apache.org/licenses/LICENSE-2.0\n**\n** Unless required by applicable law or agreed to in writing, software\n** distributed under the License is distributed on an \"AS IS\" BASIS,\n** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n** See the License for the specific language governing permissions and\n** limitations under the License.\n*/\n-->\n\n<LinearLayout\n    xmlns:android=\"http://schemas.android.com/apk/res/android\"\n    android:id=\"parentPanel\"\n    android:layout_width=\"match_parent\"\n    android:layout_height=\"wrap_content\"\n    android:viewShadowColor=\"black\"\n    android:viewShadowDy=\"3dp\"\n    android:viewShadowRadius=\"10dp\"\n    android:cornerRadius=\"4dp\"\n    android:layout_marginStart=\"8dip\"\n    android:layout_marginEnd=\"8dip\"\n    android:orientation=\"vertical\">\n\n    <LinearLayout android:id=\"topPanel\"\n        android:layout_width=\"match_parent\"\n        android:layout_height=\"wrap_content\"\n        android:orientation=\"vertical\">\n        <View android:id=\"titleDividerTop\"\n            android:layout_width=\"match_parent\"\n            android:layout_height=\"1dip\"\n            android:visibility=\"gone\"\n            android:background=\"#aaa\" ></View>\n        <LinearLayout android:id=\"title_template\"\n            android:layout_width=\"match_parent\"\n            android:layout_height=\"wrap_content\"\n            android:orientation=\"horizontal\"\n            android:gravity=\"center_vertical|start\"\n            android:minHeight=\"64dp\"\n            android:layout_marginStart=\"16dip\"\n            android:layout_marginEnd=\"16dip\">\n            <ImageView android:id=\"icon\"\n                android:layout_width=\"wrap_content\"\n                android:layout_height=\"wrap_content\"\n                android:paddingEnd=\"8dip\"></ImageView>\n            <TextView android:id=\"alertTitle\"\n                android:maxLines=\"1\"\n                android:scrollHorizontally=\"true\"\n                android:textSize=\"22sp\"\n                android:textColor=\"#333\"\n                android:singleLine=\"true\"\n                android:ellipsize=\"end\"\n                android:layout_width=\"match_parent\"\n                android:layout_height=\"wrap_content\"\n                android:textAlignment=\"viewStart\"></TextView>\n        </LinearLayout>\n        <View android:id=\"titleDivider\"\n            android:layout_width=\"match_parent\"\n            android:layout_height=\"1dip\"\n            android:visibility=\"gone\"\n            android:background=\"#aaa\" ></View>\n        <!-- If the client uses a customTitle, it will be added here. -->\n    </LinearLayout>\n\n    <LinearLayout android:id=\"contentPanel\"\n        android:layout_width=\"match_parent\"\n        android:layout_height=\"wrap_content\"\n        android:layout_weight=\"1\"\n        android:orientation=\"vertical\"\n        android:minHeight=\"64dp\">\n        <ScrollView android:id=\"scrollView\"\n            android:layout_width=\"match_parent\"\n            android:layout_height=\"wrap_content\"\n            android:clipToPadding=\"false\">\n            <TextView android:id=\"message\"\n                android:textSize=\"18sp\"\n                android:layout_width=\"match_parent\"\n                android:layout_height=\"wrap_content\"\n                android:paddingStart=\"16dip\"\n                android:paddingEnd=\"16dip\"\n                android:paddingTop=\"8dip\"\n                android:paddingBottom=\"8dip\"></TextView>\n        </ScrollView>\n    </LinearLayout>\n\n    <FrameLayout android:id=\"customPanel\"\n        android:layout_width=\"match_parent\"\n        android:layout_height=\"wrap_content\"\n        android:layout_weight=\"1\"\n        android:minHeight=\"64dp\">\n        <FrameLayout android:id=\"custom\"\n            android:layout_width=\"match_parent\"\n            android:layout_height=\"wrap_content\" ></FrameLayout>\n    </FrameLayout>\n\n    <LinearLayout android:id=\"buttonPanel\"\n        android:layout_width=\"match_parent\"\n        android:layout_height=\"wrap_content\"\n        android:minHeight=\"48dip\"\n        android:orientation=\"vertical\"\n        android:divider=\"@android:drawable/divider_horizontal\"\n        android:showDividers=\"beginning\"\n        android:dividerPadding=\"0dip\">\n        <LinearLayout\n            android:divider=\"@android:drawable/divider_vertical\"\n            android:showDividers=\"middle\"\n            android:dividerPadding=\"0dp\"\n            android:layout_width=\"match_parent\"\n            android:layout_height=\"wrap_content\"\n            android:orientation=\"horizontal\"\n            android:layoutDirection=\"locale\"\n            android:measureWithLargestChild=\"true\">\n            <Button android:id=\"button2\"\n                android:layout_width=\"wrap_content\"\n                android:layout_gravity=\"start\"\n                android:layout_weight=\"1\"\n                android:maxLines=\"2\"\n                android:paddingStart=\"4dp\"\n                android:paddingEnd=\"4dp\"\n                android:background=\"@android:drawable/item_background\"\n                android:textSize=\"14sp\"\n                android:minHeight=\"48dp\"\n                android:layout_height=\"wrap_content\" ></Button>\n            <Button android:id=\"button3\"\n                android:layout_width=\"wrap_content\"\n                android:layout_gravity=\"center_horizontal\"\n                android:layout_weight=\"1\"\n                android:maxLines=\"2\"\n                android:paddingStart=\"4dp\"\n                android:paddingEnd=\"4dp\"\n                android:background=\"@android:drawable/item_background\"\n                android:textSize=\"14sp\"\n                android:minHeight=\"48dp\"\n                android:layout_height=\"wrap_content\" ></Button>\n            <Button android:id=\"button1\"\n                android:layout_width=\"wrap_content\"\n                android:layout_gravity=\"end\"\n                android:layout_weight=\"1\"\n                android:maxLines=\"2\"\n                android:paddingStart=\"4dp\"\n                android:paddingEnd=\"4dp\"\n                android:background=\"@android:drawable/item_background\"\n                android:textSize=\"14sp\"\n                android:minHeight=\"48dp\"\n                android:layout_height=\"wrap_content\" ></Button>\n        </LinearLayout>\n     </LinearLayout>\n</LinearLayout>\n",
+            "action_bar": "<merge>\n    <LinearLayout\n            id=\"action_bar_center_layout\"\n            android:layout_marginLeft=\"60dp\"\n            android:layout_marginRight=\"60dp\"\n            android:minHeight=\"48dp\"\n            android:gravity=\"center\"\n            android:orientation=\"vertical\">\n        <TextView\n                id=\"action_bar_title\"\n                android:gravity=\"center\"\n                android:drawablePadding=\"4dp\"\n                android:singleLine=\"true\"\n                android:ellipsize=\"end\"\n                android:textColor=\"@android:color/white\"\n                android:textSize=\"18sp\"\n                ></TextView>\n        <TextView\n                id=\"action_bar_sub_title\"\n                android:visibility=\"gone\"\n                android:gravity=\"center\"\n                android:layout_marginTop=\"4dp\"\n                android:drawablePadding=\"4dp\"\n                android:singleLine=\"true\"\n                android:ellipsize=\"end\"\n                android:textColor=\"@android:color/white\"\n                android:textSize=\"12sp\"\n                ></TextView>\n    </LinearLayout>\n    <Button\n            id=\"action_bar_left\"\n            android:visibility=\"gone\"\n            android:layout_gravity=\"left|center_vertical\"\n            android:layout_width=\"wrap_content\"\n            android:background=\"@android:drawable/item_background\"\n            android:textColor=\"@android:color/white\"\n            android:paddingLeft=\"6dp\"\n            android:paddingRight=\"6dp\"\n            android:drawablePadding=\"4dp\"\n            android:minWidth=\"32dp\"\n            android:textSize=\"17sp\"\n            android:singleLine=\"true\"\n            ></Button>\n    <Button\n            id=\"action_bar_right\"\n            android:visibility=\"gone\"\n            android:layout_gravity=\"right|center_vertical\"\n            android:layout_width=\"wrap_content\"\n            android:background=\"@android:drawable/item_background\"\n            android:textColor=\"@android:color/white\"\n            android:paddingRight=\"6dp\"\n            android:paddingRight=\"6dp\"\n            android:drawablePadding=\"4dp\"\n            android:minWidth=\"32dp\"\n            android:textSize=\"17sp\"\n            android:singleLine=\"true\"\n            ></Button>\n</merge>\n",
+            "alert_dialog": "\n<!--\n/*\n** Copyright 2010, The Android Open Source Project\n**\n** Licensed under the Apache License, Version 2.0 (the \"License\");\n** you may not use this file except in compliance with the License.\n** You may obtain a copy of the License at\n**\n**     http://www.apache.org/licenses/LICENSE-2.0\n**\n** Unless required by applicable law or agreed to in writing, software\n** distributed under the License is distributed on an \"AS IS\" BASIS,\n** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n** See the License for the specific language governing permissions and\n** limitations under the License.\n*/\n-->\n\n<!--android:viewShadowColor=\"black\"-->\n<!--android:viewShadowDy=\"3dp\"-->\n<!--android:viewShadowRadius=\"10dp\"-->\n<LinearLayout\n    xmlns:android=\"http://schemas.android.com/apk/res/android\"\n    android:id=\"parentPanel\"\n    android:layout_width=\"match_parent\"\n    android:layout_height=\"wrap_content\"\n    android:cornerRadius=\"4dp\"\n    android:layout_marginStart=\"8dip\"\n    android:layout_marginEnd=\"8dip\"\n    android:orientation=\"vertical\">\n\n    <LinearLayout android:id=\"topPanel\"\n        android:layout_width=\"match_parent\"\n        android:layout_height=\"wrap_content\"\n        android:orientation=\"vertical\">\n        <View android:id=\"titleDividerTop\"\n            android:layout_width=\"match_parent\"\n            android:layout_height=\"1dip\"\n            android:visibility=\"gone\"\n            android:background=\"#aaa\" ></View>\n        <LinearLayout android:id=\"title_template\"\n            android:layout_width=\"match_parent\"\n            android:layout_height=\"wrap_content\"\n            android:orientation=\"horizontal\"\n            android:gravity=\"center_vertical|start\"\n            android:minHeight=\"64dp\"\n            android:layout_marginStart=\"16dip\"\n            android:layout_marginEnd=\"16dip\">\n            <ImageView android:id=\"icon\"\n                android:layout_width=\"wrap_content\"\n                android:layout_height=\"wrap_content\"\n                android:paddingEnd=\"8dip\"></ImageView>\n            <TextView android:id=\"alertTitle\"\n                android:maxLines=\"1\"\n                android:scrollHorizontally=\"true\"\n                android:textSize=\"22sp\"\n                android:textColor=\"#333\"\n                android:singleLine=\"true\"\n                android:ellipsize=\"end\"\n                android:layout_width=\"match_parent\"\n                android:layout_height=\"wrap_content\"\n                android:textAlignment=\"viewStart\"></TextView>\n        </LinearLayout>\n        <View android:id=\"titleDivider\"\n            android:layout_width=\"match_parent\"\n            android:layout_height=\"1dip\"\n            android:visibility=\"gone\"\n            android:background=\"#aaa\" ></View>\n        <!-- If the client uses a customTitle, it will be added here. -->\n    </LinearLayout>\n\n    <LinearLayout android:id=\"contentPanel\"\n        android:layout_width=\"match_parent\"\n        android:layout_height=\"wrap_content\"\n        android:layout_weight=\"1\"\n        android:orientation=\"vertical\"\n        android:minHeight=\"64dp\">\n        <ScrollView android:id=\"scrollView\"\n            android:layout_width=\"match_parent\"\n            android:layout_height=\"wrap_content\"\n            android:clipToPadding=\"false\">\n            <TextView android:id=\"message\"\n                android:textSize=\"18sp\"\n                android:layout_width=\"match_parent\"\n                android:layout_height=\"wrap_content\"\n                android:paddingStart=\"16dip\"\n                android:paddingEnd=\"16dip\"\n                android:paddingTop=\"8dip\"\n                android:paddingBottom=\"8dip\"></TextView>\n        </ScrollView>\n    </LinearLayout>\n\n    <FrameLayout android:id=\"customPanel\"\n        android:layout_width=\"match_parent\"\n        android:layout_height=\"wrap_content\"\n        android:layout_weight=\"1\"\n        android:minHeight=\"64dp\">\n        <FrameLayout android:id=\"custom\"\n            android:layout_width=\"match_parent\"\n            android:layout_height=\"wrap_content\" ></FrameLayout>\n    </FrameLayout>\n\n    <LinearLayout android:id=\"buttonPanel\"\n        android:layout_width=\"match_parent\"\n        android:layout_height=\"wrap_content\"\n        android:minHeight=\"48dip\"\n        android:orientation=\"vertical\"\n        android:divider=\"@android:drawable/divider_horizontal\"\n        android:showDividers=\"beginning\"\n        android:dividerPadding=\"0dip\">\n        <LinearLayout\n            android:divider=\"@android:drawable/divider_vertical\"\n            android:showDividers=\"middle\"\n            android:dividerPadding=\"0dp\"\n            android:layout_width=\"match_parent\"\n            android:layout_height=\"wrap_content\"\n            android:orientation=\"horizontal\"\n            android:layoutDirection=\"locale\"\n            android:measureWithLargestChild=\"true\">\n            <Button android:id=\"button2\"\n                android:layout_width=\"wrap_content\"\n                android:layout_gravity=\"start\"\n                android:layout_weight=\"1\"\n                android:maxLines=\"2\"\n                android:paddingStart=\"4dp\"\n                android:paddingEnd=\"4dp\"\n                android:background=\"@android:drawable/item_background\"\n                android:textSize=\"14sp\"\n                android:minHeight=\"48dp\"\n                android:layout_height=\"wrap_content\" ></Button>\n            <Button android:id=\"button3\"\n                android:layout_width=\"wrap_content\"\n                android:layout_gravity=\"center_horizontal\"\n                android:layout_weight=\"1\"\n                android:maxLines=\"2\"\n                android:paddingStart=\"4dp\"\n                android:paddingEnd=\"4dp\"\n                android:background=\"@android:drawable/item_background\"\n                android:textSize=\"14sp\"\n                android:minHeight=\"48dp\"\n                android:layout_height=\"wrap_content\" ></Button>\n            <Button android:id=\"button1\"\n                android:layout_width=\"wrap_content\"\n                android:layout_gravity=\"end\"\n                android:layout_weight=\"1\"\n                android:maxLines=\"2\"\n                android:paddingStart=\"4dp\"\n                android:paddingEnd=\"4dp\"\n                android:background=\"@android:drawable/item_background\"\n                android:textSize=\"14sp\"\n                android:minHeight=\"48dp\"\n                android:layout_height=\"wrap_content\" ></Button>\n        </LinearLayout>\n     </LinearLayout>\n</LinearLayout>\n",
             "alert_dialog_progress": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!-- Copyright (C) 2011 The Android Open Source Project\n\n     Licensed under the Apache License, Version 2.0 (the \"License\");\n     you may not use this file except in compliance with the License.\n     You may obtain a copy of the License at\n\n          http://www.apache.org/licenses/LICENSE-2.0\n\n     Unless required by applicable law or agreed to in writing, software\n     distributed under the License is distributed on an \"AS IS\" BASIS,\n     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n     See the License for the specific language governing permissions and\n     limitations under the License.\n-->\n\n<RelativeLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"\n    android:layout_width=\"wrap_content\" android:layout_height=\"match_parent\">\n        <ProgressBar android:id=\"progress\"\n            style=\"@android:attr/progressBarStyleHorizontal\"\n            android:layout_width=\"match_parent\"\n            android:layout_height=\"wrap_content\"\n            android:layout_marginTop=\"16dip\"\n            android:layout_marginBottom=\"1dip\"\n            android:layout_marginStart=\"16dip\"\n            android:layout_marginEnd=\"16dip\"\n            android:layout_centerHorizontal=\"true\"></ProgressBar>\n        <TextView\n            android:id=\"progress_percent\"\n            android:layout_width=\"wrap_content\"\n            android:layout_height=\"wrap_content\"\n            android:paddingBottom=\"16dip\"\n            android:layout_marginStart=\"16dip\"\n            android:layout_marginEnd=\"16dip\"\n            android:layout_alignParentStart=\"true\"\n            android:layout_below=\"progress\"\n        ></TextView>\n        <TextView\n            android:id=\"progress_number\"\n            android:layout_width=\"wrap_content\"\n            android:layout_height=\"wrap_content\"\n            android:paddingBottom=\"16dip\"\n            android:layout_marginStart=\"16dip\"\n            android:layout_marginEnd=\"16dip\"\n            android:layout_alignParentEnd=\"true\"\n            android:layout_below=\"progress\"\n        ></TextView>\n</RelativeLayout>\n",
-            "select_dialog": "<!--\n/*\n** Copyright 2010, The Android Open Source Project\n**\n** Licensed under the Apache License, Version 2.0 (the \"License\");\n** you may not use this file except in compliance with the License.\n** You may obtain a copy of the License at\n**\n**     http://www.apache.org/licenses/LICENSE-2.0\n**\n** Unless required by applicable law or agreed to in writing, software\n** distributed under the License is distributed on an \"AS IS\" BASIS,\n** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n** See the License for the specific language governing permissions and\n** limitations under the License.\n*/\n-->\n\n<!--\n    This layout file is used by the AlertDialog when displaying a list of items.\n    This layout file is inflated and used as the ListView to display the items.\n    Assign an ID so its state will be saved/restored.\n-->\n<view class=\"android.app.AlertController.RecycleListView\"\n    xmlns:android=\"http://schemas.android.com/apk/res/android\"\n    android:id=\"select_dialog_listview\"\n    android:layout_width=\"match_parent\"\n    android:layout_height=\"match_parent\"\n    android:cacheColorHint=\"@null\"\n    android:divider=\"@android:drawable/list_divider\"\n    android:scrollbars=\"vertical\"\n    android:overScrollMode=\"ifContentScrolls\"\n    android:textAlignment=\"viewStart\" />\n",
+            "popup_menu_item_layout": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!-- Copyright (C) 2010 The Android Open Source Project\n\n     Licensed under the Apache License, Version 2.0 (the \"License\");\n     you may not use this file except in compliance with the License.\n     You may obtain a copy of the License at\n  \n          http://www.apache.org/licenses/LICENSE-2.0\n  \n     Unless required by applicable law or agreed to in writing, software\n     distributed under the License is distributed on an \"AS IS\" BASIS,\n     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n     See the License for the specific language governing permissions and\n     limitations under the License.\n-->\n\n<LinearLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"\n    android:layout_width=\"match_parent\"\n    android:layout_height=\"48dp\"\n    android:minWidth=\"196dip\"\n    android:paddingEnd=\"16dip\">\n\n    <ImageView\n        android:id=\"icon\"\n        android:visibility=\"gone\"\n        android:layout_width=\"wrap_content\"\n        android:layout_height=\"wrap_content\"\n        android:layout_gravity=\"center_vertical\"\n        android:layout_marginStart=\"8dip\"\n        android:layout_marginEnd=\"-8dip\"\n        android:layout_marginTop=\"8dip\"\n        android:layout_marginBottom=\"8dip\"\n        android:scaleType=\"centerInside\"\n        android:duplicateParentState=\"true\"></ImageView>\n    \n    <!-- The title and summary have some gap between them, and this 'group' should be centered vertically. -->\n    <RelativeLayout\n        android:layout_width=\"0dip\"\n        android:layout_weight=\"1\"\n        android:layout_height=\"wrap_content\"\n        android:layout_gravity=\"center_vertical\"\n        android:layout_marginStart=\"16dip\"\n        android:duplicateParentState=\"true\">\n        \n        <TextView \n            android:id=\"title\"\n            android:layout_width=\"match_parent\"\n            android:layout_height=\"wrap_content\"\n            android:layout_alignParentTop=\"true\"\n            android:layout_alignParentStart=\"true\"\n\n            android:textColor=\"@android:color/primary_text_dark_disable_only\"\n            android:textSize=\"18sp\"\n\n            android:singleLine=\"true\"\n            android:duplicateParentState=\"true\"\n            android:ellipsize=\"marquee\"\n            android:fadingEdge=\"horizontal\"\n            android:textAlignment=\"viewStart\" ></TextView>\n\n        <TextView\n            android:id=\"shortcut\"\n            android:visibility=\"gone\"\n            android:layout_width=\"wrap_content\"\n            android:layout_height=\"wrap_content\"\n            android:layout_below=\"title\"\n            android:layout_alignParentStart=\"true\"\n\n            android:textColor=\"@android:color/primary_text_dark_disable_only\"\n            android:textSize=\"12sp\"\n\n            android:singleLine=\"true\"\n            android:duplicateParentState=\"true\"\n            android:textAlignment=\"viewStart\" ></TextView>\n\n    </RelativeLayout>\n\n    <!-- Checkbox, and/or radio button will be inserted here. -->\n    \n</LinearLayout>\n",
+            "select_dialog": "<!--\n/*\n** Copyright 2010, The Android Open Source Project\n**\n** Licensed under the Apache License, Version 2.0 (the \"License\");\n** you may not use this file except in compliance with the License.\n** You may obtain a copy of the License at\n**\n**     http://www.apache.org/licenses/LICENSE-2.0\n**\n** Unless required by applicable law or agreed to in writing, software\n** distributed under the License is distributed on an \"AS IS\" BASIS,\n** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n** See the License for the specific language governing permissions and\n** limitations under the License.\n*/\n-->\n\n<!--\n    This layout file is used by the AlertDialog when displaying a list of items.\n    This layout file is inflated and used as the ListView to display the items.\n    Assign an ID so its state will be saved/restored.\n-->\n<view class=\"android.app.AlertController.RecycleListView\"\n    xmlns:android=\"http://schemas.android.com/apk/res/android\"\n    android:id=\"select_dialog_listview\"\n    android:layout_width=\"match_parent\"\n    android:layout_height=\"match_parent\"\n    android:cacheColorHint=\"@null\"\n    android:divider=\"@android:drawable/list_divider\"\n    android:scrollbars=\"vertical\"\n    android:overScrollMode=\"ifContentScrolls\"\n    android:textAlignment=\"viewStart\" ></view>\n",
             "select_dialog_item": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!--\n/*\n** Copyright 2010, The Android Open Source Project\n**\n** Licensed under the Apache License, Version 2.0 (the \"License\");\n** you may not use this file except in compliance with the License.\n** You may obtain a copy of the License at\n**\n**     http://www.apache.org/licenses/LICENSE-2.0\n**\n** Unless required by applicable law or agreed to in writing, software\n** distributed under the License is distributed on an \"AS IS\" BASIS,\n** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n** See the License for the specific language governing permissions and\n** limitations under the License.\n*/\n-->\n\n<!--\n    This layout file is used by the AlertDialog when displaying a list of items.\n    This layout file is inflated and used as the TextView to display individual\n    items.\n-->\n<TextView xmlns:android=\"http://schemas.android.com/apk/res/android\"\n    android:id=\"text1\"\n    android:layout_width=\"match_parent\"\n    android:layout_height=\"wrap_content\"\n    android:minHeight=\"48dp\"\n    android:textSize=\"18sp\"\n    android:gravity=\"center_vertical\"\n    android:paddingStart=\"16dip\"\n    android:paddingEnd=\"16dip\"\n    android:ellipsize=\"end\"\n></TextView>\n",
             "select_dialog_multichoice": "\n<!-- Copyright (C) 2010 The Android Open Source Project\n\n     Licensed under the Apache License, Version 2.0 (the \"License\");\n     you may not use this file except in compliance with the License.\n     You may obtain a copy of the License at\n\n          http://www.apache.org/licenses/LICENSE-2.0\n\n     Unless required by applicable law or agreed to in writing, software\n     distributed under the License is distributed on an \"AS IS\" BASIS,\n     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n     See the License for the specific language governing permissions and\n     limitations under the License.\n-->\n\n<CheckedTextView\n    android:id=\"text1\"\n    android:layout_width=\"match_parent\"\n    android:layout_height=\"wrap_content\"\n    android:minHeight=\"48dp\"\n    android:textSize=\"18sp\"\n    android:gravity=\"center_vertical\"\n    android:paddingStart=\"16dip\"\n    android:paddingEnd=\"16dip\"\n    android:checkMark=\"@android:drawable/btn_check\"\n    android:ellipsize=\"end\"\n></CheckedTextView>\n",
             "select_dialog_singlechoice": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!-- Copyright (C) 2010 The Android Open Source Project\n\n     Licensed under the Apache License, Version 2.0 (the \"License\");\n     you may not use this file except in compliance with the License.\n     You may obtain a copy of the License at\n\n          http://www.apache.org/licenses/LICENSE-2.0\n\n     Unless required by applicable law or agreed to in writing, software\n     distributed under the License is distributed on an \"AS IS\" BASIS,\n     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n     See the License for the specific language governing permissions and\n     limitations under the License.\n-->\n\n<CheckedTextView xmlns:android=\"http://schemas.android.com/apk/res/android\"\n    android:id=\"text1\"\n    android:layout_width=\"match_parent\"\n    android:layout_height=\"wrap_content\"\n    android:minHeight=\"48dp\"\n    android:textSize=\"18sp\"\n    android:gravity=\"center_vertical\"\n    android:paddingStart=\"16dip\"\n    android:paddingEnd=\"16dip\"\n    android:checkMark=\"@android:drawable/btn_radio\"\n    android:ellipsize=\"end\"\n></CheckedTextView>\n",
@@ -4327,8 +4368,10 @@ var android;
                 return data;
             }
         }
+        layout.action_bar = '@android:layout/action_bar';
         layout.alert_dialog = '@android:layout/alert_dialog';
         layout.alert_dialog_progress = '@android:layout/alert_dialog_progress';
+        layout.popup_menu_item_layout = '@android:layout/popup_menu_item_layout';
         layout.select_dialog = '@android:layout/select_dialog';
         layout.select_dialog_item = '@android:layout/select_dialog_item';
         layout.select_dialog_multichoice = '@android:layout/select_dialog_multichoice';
@@ -4434,6 +4477,10 @@ var android;
                 getString(refString, notFindValue = refString) {
                     if (!refString || !refString.startsWith('@'))
                         return notFindValue;
+                    if (refString.startsWith('@android:string/')) {
+                        refString = refString.substring('@android:string/'.length);
+                        return android.R.string_[refString];
+                    }
                     let referenceArray = [];
                     let attrValue = refString;
                     while (attrValue && attrValue.startsWith('@')) {
@@ -5923,28 +5970,21 @@ var androidui;
                 }
                 return null;
             }
-            getRefObject(ref, recycel = true) {
+            getRefObject(ref) {
                 if (ref && ref.startsWith('@ref/')) {
-                    ref = ref.substring(5);
+                    ref = ref.substring('@ref/'.length);
                     let index = Number.parseInt(ref);
                     if (Number.isInteger(index)) {
-                        let obj = this.objectRefs[index];
-                        if (recycel)
-                            this.objectRefs[index] = null;
-                        return obj;
+                        return this.objectRefs[index];
                     }
                 }
             }
             setRefObject(obj) {
-                let length = this.objectRefs.length;
-                for (let i = 0; i < length; i++) {
-                    if (this.objectRefs[i] == null) {
-                        this.objectRefs[i] = obj;
-                        return '@ref/' + i;
-                    }
-                }
+                let index = this.objectRefs.indexOf(obj);
+                if (index >= 0)
+                    return '@ref/' + index;
                 this.objectRefs.push(obj);
-                return '@ref/' + length;
+                return '@ref/' + (this.objectRefs.length - 1);
             }
             parsePaddingMarginLTRB(value) {
                 value = (value + '');
@@ -6222,9 +6262,8 @@ var androidui;
         class NetDrawable extends Drawable {
             constructor(src, paint, overrideImageRatio) {
                 super();
-                this.mImageWidth = -1;
-                this.mImageHeight = -1;
-                this.mTmpTileBound = new Rect();
+                this.mImageWidth = 0;
+                this.mImageHeight = 0;
                 let image;
                 if (src instanceof image_1.NetImage) {
                     image = src;
@@ -6235,10 +6274,14 @@ var androidui;
                     image = new image_1.NetImage(src, overrideImageRatio);
                 }
                 image.addLoadListener(() => this.onLoad(), () => this.onError());
+                this.mState = new State(image, paint);
+                if (image.isImageLoaded())
+                    this.initBoundWithLoadedImage(image);
+            }
+            initBoundWithLoadedImage(image) {
                 let imageRatio = image.getImageRatio();
                 this.mImageWidth = Math.floor(image.width / imageRatio * android.content.res.Resources.getDisplayMetrics().density);
                 this.mImageHeight = Math.floor(image.height / imageRatio * android.content.res.Resources.getDisplayMetrics().density);
-                this.mState = new State(image, paint);
             }
             draw(canvas) {
                 if (!this.isImageSizeEmpty()) {
@@ -6260,6 +6303,8 @@ var androidui;
                 let tileX = this.mTileModeX;
                 let tileY = this.mTileModeY;
                 let bound = this.getBounds();
+                if (this.mTmpTileBound == null)
+                    this.mTmpTileBound = new Rect();
                 let tmpBound = this.mTmpTileBound;
                 tmpBound.setEmpty();
                 function drawColumn() {
@@ -6300,9 +6345,7 @@ var androidui;
                 return this.mImageHeight;
             }
             onLoad() {
-                let imageRatio = this.mState.mImage.getImageRatio();
-                this.mImageWidth = Math.floor(this.mState.mImage.width / imageRatio * android.content.res.Resources.getDisplayMetrics().density);
-                this.mImageHeight = Math.floor(this.mState.mImage.height / imageRatio * android.content.res.Resources.getDisplayMetrics().density);
+                this.initBoundWithLoadedImage(this.mState.mImage);
                 if (this.mLoadListener)
                     this.mLoadListener.onLoad(this);
                 this.invalidateSelf();
@@ -6550,6 +6593,7 @@ var android;
         KeyEvent.KEYCODE_MOVE_HOME = 36;
         KeyEvent.KEYCODE_MOVE_END = 35;
         KeyEvent.KEYCODE_BACK = -1;
+        KeyEvent.KEYCODE_MENU = -2;
         KeyEvent.ACTION_DOWN = 0;
         KeyEvent.ACTION_UP = 1;
         KeyEvent.META_ALT_ON = 0x02;
@@ -8449,36 +8493,16 @@ var android;
         });
         const density = Resources.getDisplayMetrics().density;
         class drawable {
-            static get button_background() {
-                class DefaultButtonBackgroundDrawable extends InsetDrawable {
-                    constructor() {
-                        super(DefaultButtonBackgroundDrawable.createStateList(), 6 * density);
-                    }
-                    static createStateList() {
-                        let stateList = new StateListDrawable();
-                        stateList.addState([View.VIEW_STATE_PRESSED], new ColorDrawable(Color.GRAY));
-                        stateList.addState([View.VIEW_STATE_ACTIVATED], new ColorDrawable(Color.GRAY));
-                        stateList.addState([View.VIEW_STATE_FOCUSED], new ColorDrawable(0xffaaaaaa));
-                        stateList.addState([-View.VIEW_STATE_ENABLED], new ColorDrawable(0xffebebeb));
-                        stateList.addState([], new ColorDrawable(Color.LTGRAY));
-                        return stateList;
-                    }
-                    getPadding(padding) {
-                        let result = super.getPadding(padding);
-                        padding.left += 12 * density;
-                        padding.right += 12 * density;
-                        padding.top += 6 * density;
-                        padding.bottom += 6 * density;
-                        return result;
-                    }
-                    getIntrinsicWidth() {
-                        return 64 * density;
-                    }
-                    getIntrinsicHeight() {
-                        return 48 * density;
-                    }
-                }
-                return new DefaultButtonBackgroundDrawable();
+            static get btn_default() {
+                let stateList = new StateListDrawable();
+                stateList.addState([-View.VIEW_STATE_WINDOW_FOCUSED, View.VIEW_STATE_ENABLED], R.image.btn_default_normal_holo_light);
+                stateList.addState([-View.VIEW_STATE_WINDOW_FOCUSED, -View.VIEW_STATE_ENABLED], R.image.btn_default_disabled_holo_light);
+                stateList.addState([View.VIEW_STATE_PRESSED], R.image.btn_default_pressed_holo_light);
+                stateList.addState([View.VIEW_STATE_FOCUSED, View.VIEW_STATE_ENABLED], R.image.btn_default_focused_holo_light);
+                stateList.addState([View.VIEW_STATE_ENABLED], R.image.btn_default_normal_holo_light);
+                stateList.addState([View.VIEW_STATE_FOCUSED], R.image.btn_default_disabled_focused_holo_light);
+                stateList.addState([], R.image.btn_default_disabled_holo_light);
+                return stateList;
             }
             static get btn_check() {
                 let stateList = new StateListDrawable();
@@ -8715,8 +8739,8 @@ var android;
             static get item_background() {
                 let stateList = new StateListDrawable();
                 stateList.addState([View.VIEW_STATE_FOCUSED, -View.VIEW_STATE_ENABLED], new ColorDrawable(0xffebebeb));
-                stateList.addState([View.VIEW_STATE_FOCUSED, View.VIEW_STATE_PRESSED], new ColorDrawable(Color.LTGRAY));
-                stateList.addState([-View.VIEW_STATE_FOCUSED, View.VIEW_STATE_PRESSED], new ColorDrawable(Color.LTGRAY));
+                stateList.addState([View.VIEW_STATE_FOCUSED, View.VIEW_STATE_PRESSED], new ColorDrawable(0x88888888));
+                stateList.addState([-View.VIEW_STATE_FOCUSED, View.VIEW_STATE_PRESSED], new ColorDrawable(0x88888888));
                 stateList.addState([View.VIEW_STATE_FOCUSED], new ColorDrawable(0xffaaaaaa));
                 stateList.addState([], new ColorDrawable(Color.TRANSPARENT));
                 return stateList;
@@ -8731,28 +8755,302 @@ var android;
                 let shadow = new ShadowDrawable(bg, 5 * density, 0, 2 * density, 0x44000000);
                 return new InsetDrawable(shadow, 7 * density);
             }
-            static get dropdown_background_dark() {
-                let bg = new RoundRectDrawable(0xff333333, 2 * density, 2 * density, 2 * density, 2 * density);
-                bg.getIntrinsicWidth = () => 36 * density;
-                bg.getIntrinsicHeight = () => 36 * density;
-                bg.getPadding = (rect) => {
-                    rect.set(12 * density, 6 * density, 12 * density, 6 * density);
-                    return true;
-                };
-                let shadow = new ShadowDrawable(bg, 3 * density, 0, 2 * density, 0x44000000);
-                return new InsetDrawable(shadow, 5 * density);
-            }
-            static get menu_panel_holo_light() {
-                let bg = new RoundRectDrawable(0xffefefef, 2 * density, 2 * density, 2 * density, 2 * density);
-                bg.getIntrinsicWidth = () => 48 * density;
-                bg.getIntrinsicHeight = () => 16 * density;
-                let shadow = new ShadowDrawable(bg, 6 * density, 0, 2 * density, 0xaa000000);
-                return new InsetDrawable(shadow, 8 * density);
-            }
         }
         R.drawable = drawable;
     })(R = android.R || (android.R = {}));
 })(android || (android = {}));
+/**
+ * Created by linfaxin on 16/1/23.
+ */
+///<reference path="NetDrawable.ts"/>
+///<reference path="../../android/graphics/drawable/Drawable.ts"/>
+///<reference path="../../android/graphics/Paint.ts"/>
+///<reference path="../../android/graphics/Rect.ts"/>
+///<reference path="../../android/graphics/Color.ts"/>
+///<reference path="../../android/view/ViewConfiguration.ts"/>
+///<reference path="../../android/content/res/Resources.ts"/>
+///<reference path="NetImage.ts"/>
+var androidui;
+(function (androidui) {
+    var image;
+    (function (image_2) {
+        var Rect = android.graphics.Rect;
+        var Color = android.graphics.Color;
+        var Canvas = android.graphics.Canvas;
+        class NinePatchDrawable extends image_2.NetDrawable {
+            constructor(...args) {
+                super(...args);
+                this.mTmpRect = new Rect();
+                this.mTmpRect2 = new Rect();
+            }
+            initBoundWithLoadedImage(image) {
+                let imageRatio = image.getImageRatio();
+                this.mImageWidth = Math.floor((image.width - 2) / imageRatio * android.content.res.Resources.getDisplayMetrics().density);
+                this.mImageHeight = Math.floor((image.height - 2) / imageRatio * android.content.res.Resources.getDisplayMetrics().density);
+                this.mNinePatchBorderInfo = NinePatchDrawable.GlobalBorderInfoCache.get(this.mState.mImage.src);
+            }
+            onLoad() {
+                let image = this.mState.mImage;
+                let ninePatchBorderInfo = NinePatchDrawable.GlobalBorderInfoCache.get(image.src);
+                if (ninePatchBorderInfo) {
+                    this.mNinePatchBorderInfo = ninePatchBorderInfo;
+                    super.onLoad();
+                    return;
+                }
+                this.mTmpRect.set(0, 1, 1, image.height - 1);
+                image.getPixels(this.mTmpRect, (leftBorder) => {
+                    this.mTmpRect.set(1, 0, image.width - 1, 1);
+                    image.getPixels(this.mTmpRect, (topBorder) => {
+                        this.mTmpRect.set(image.width - 1, 1, image.width, image.height - 1);
+                        image.getPixels(this.mTmpRect, (rightBorder) => {
+                            this.mTmpRect.set(1, image.height - 1, image.width - 1, image.height);
+                            image.getPixels(this.mTmpRect, (bottomBorder) => {
+                                ninePatchBorderInfo = new NinePatchBorderInfo(leftBorder, topBorder, rightBorder, bottomBorder);
+                                NinePatchDrawable.GlobalBorderInfoCache.set(image.src, ninePatchBorderInfo);
+                                super.onLoad();
+                            });
+                        });
+                    });
+                });
+            }
+            draw(canvas) {
+                if (!this.mNinePatchBorderInfo)
+                    return;
+                if (!this.isImageSizeEmpty()) {
+                    let cache = NinePatchDrawable.DrawNinePatchWithCache ? this.getNinePatchCache() : null;
+                    if (cache) {
+                        canvas.drawCanvas(cache);
+                    }
+                    else {
+                        this.drawNinePatch(canvas);
+                    }
+                }
+            }
+            getNinePatchCache() {
+                let bound = this.getBounds();
+                let width = bound.width();
+                let height = bound.height();
+                let cache = this.mNinePatchDrawCache;
+                if (cache) {
+                    if (cache.getWidth() === width && cache.getHeight() === height) {
+                        return cache;
+                    }
+                    cache.recycle();
+                }
+                const cachePixelSize = width * height * 4;
+                const drawingCacheSize = android.view.ViewConfiguration.get().getScaledMaximumDrawingCacheSize();
+                if (cachePixelSize > drawingCacheSize)
+                    return null;
+                cache = this.mNinePatchDrawCache = new Canvas(bound.width(), bound.height());
+                this.drawNinePatch(cache);
+                return cache;
+            }
+            drawNinePatch(canvas) {
+                let imageWidth = this.mImageWidth;
+                let imageHeight = this.mImageHeight;
+                if (imageHeight <= 0 || imageWidth <= 0)
+                    return;
+                let image = this.mState.mImage;
+                let bound = this.getBounds();
+                let staticWidthSum = this.mNinePatchBorderInfo.getHorizontalStaticLengthSum();
+                let staticHeightSum = this.mNinePatchBorderInfo.getVerticalStaticLengthSum();
+                let extraWidth = bound.width() - staticWidthSum;
+                let extraHeight = bound.height() - staticHeightSum;
+                let staticWidthPartScale = extraWidth >= 0 ? 1 : bound.width() / staticWidthSum;
+                let staticHeightPartScale = extraHeight >= 0 ? 1 : bound.height() / staticHeightSum;
+                const scaleHorizontalWeightSum = this.mNinePatchBorderInfo.getHorizontalScaleLengthSum();
+                const scaleVerticalWeightSum = this.mNinePatchBorderInfo.getVerticalScaleLengthSum();
+                const drawColumn = (srcFromX, srcToX, dstFromX, dstToX) => {
+                    const heightParts = this.mNinePatchBorderInfo.getVerticalTypedValues();
+                    let srcFromY = 1;
+                    let dstFromY = 0;
+                    for (let i = 0, size = heightParts.length; i < size; i++) {
+                        let typedValue = heightParts[i];
+                        let isScalePart = NinePatchBorderInfo.isScaleType(typedValue);
+                        let srcHeight = NinePatchBorderInfo.getValueUnpack(typedValue);
+                        let dstHeight;
+                        if (isScalePart) {
+                            dstHeight = extraHeight * srcHeight / scaleVerticalWeightSum;
+                            if (dstHeight <= 0)
+                                continue;
+                        }
+                        else {
+                            dstHeight = srcHeight * staticHeightPartScale;
+                        }
+                        let srcRect = this.mTmpRect;
+                        let dstRect = this.mTmpRect2;
+                        srcRect.set(srcFromX, srcFromY, srcToX, srcFromY + srcHeight);
+                        dstRect.set(dstFromX, dstFromY, dstToX, dstFromY + dstHeight);
+                        canvas.drawImage(image, srcRect, dstRect);
+                        srcFromY += srcHeight;
+                        dstFromY += dstHeight;
+                    }
+                };
+                const widthParts = this.mNinePatchBorderInfo.getHorizontalTypedValues();
+                let srcFromX = 1;
+                let dstFromX = 0;
+                for (let i = 0, size = widthParts.length; i < size; i++) {
+                    let typedValue = widthParts[i];
+                    let isScalePart = NinePatchBorderInfo.isScaleType(typedValue);
+                    let srcWidth = NinePatchBorderInfo.getValueUnpack(typedValue);
+                    let dstWidth;
+                    if (isScalePart) {
+                        dstWidth = extraWidth * srcWidth / scaleHorizontalWeightSum;
+                    }
+                    else {
+                        dstWidth = srcWidth * staticWidthPartScale;
+                    }
+                    if (dstWidth <= 0)
+                        continue;
+                    drawColumn(srcFromX, srcFromX + srcWidth, dstFromX, dstFromX + dstWidth);
+                    srcFromX += srcWidth;
+                    dstFromX += dstWidth;
+                }
+            }
+            getPadding(padding) {
+                let info = this.mNinePatchBorderInfo;
+                if (!info)
+                    return false;
+                padding.set(info.getPaddingLeft(), info.getPaddingTop(), info.getPaddingRight(), info.getPaddingBottom());
+                return true;
+            }
+        }
+        NinePatchDrawable.GlobalBorderInfoCache = new Map();
+        NinePatchDrawable.DrawNinePatchWithCache = true;
+        image_2.NinePatchDrawable = NinePatchDrawable;
+        class NinePatchBorderInfo {
+            constructor(leftBorder, topBorder, rightBorder, bottomBorder) {
+                //this.leftBorder = leftBorder;
+                //this.topBorder = topBorder;
+                //this.rightBorder = rightBorder;
+                //this.bottomBorder = bottomBorder;
+                this.horizontalStaticLengthSum = 0;
+                this.horizontalScaleLengthSum = 0;
+                this.verticalStaticLengthSum = 0;
+                this.verticalScaleLengthSum = 0;
+                this.paddingLeft = 0;
+                this.paddingTop = 0;
+                this.paddingRight = 0;
+                this.paddingBottom = 0;
+                this.horizontalTypedValues = [];
+                this.verticalTypedValues = [];
+                let tmpLength = 0;
+                let currentStatic = true;
+                for (let color of leftBorder) {
+                    let isScaleColor = NinePatchBorderInfo.isScaleColor(color);
+                    let typeChange = (isScaleColor && currentStatic) || (!isScaleColor && !currentStatic);
+                    if (typeChange) {
+                        let lengthValue = currentStatic ? tmpLength : -tmpLength;
+                        if (currentStatic)
+                            this.verticalStaticLengthSum += tmpLength;
+                        this.verticalTypedValues.push(lengthValue);
+                        tmpLength = 1;
+                    }
+                    else {
+                        tmpLength++;
+                    }
+                    currentStatic = !isScaleColor;
+                }
+                if (currentStatic)
+                    this.verticalStaticLengthSum += tmpLength;
+                this.verticalScaleLengthSum = leftBorder.length - this.verticalStaticLengthSum;
+                this.verticalTypedValues.push(currentStatic ? tmpLength : -tmpLength);
+                tmpLength = 0;
+                for (let color of topBorder) {
+                    let isScaleColor = NinePatchBorderInfo.isScaleColor(color);
+                    let typeChange = (isScaleColor && currentStatic) || (!isScaleColor && !currentStatic);
+                    if (typeChange) {
+                        let lengthValue = currentStatic ? tmpLength : -tmpLength;
+                        if (currentStatic)
+                            this.horizontalStaticLengthSum += tmpLength;
+                        this.horizontalTypedValues.push(lengthValue);
+                        tmpLength = 1;
+                    }
+                    else {
+                        tmpLength++;
+                    }
+                    currentStatic = !isScaleColor;
+                }
+                if (currentStatic)
+                    this.horizontalStaticLengthSum += tmpLength;
+                this.horizontalScaleLengthSum = topBorder.length - this.horizontalStaticLengthSum;
+                this.horizontalTypedValues.push(currentStatic ? tmpLength : -tmpLength);
+                tmpLength = 0;
+                if (this.horizontalTypedValues.length >= 3) {
+                    this.paddingLeft = Math.max(0, this.horizontalTypedValues[0]);
+                    this.paddingRight = Math.max(0, this.horizontalTypedValues[this.horizontalTypedValues.length - 1]);
+                }
+                if (this.verticalTypedValues.length >= 3) {
+                    this.paddingTop = Math.max(0, this.verticalTypedValues[0]);
+                    this.paddingBottom = Math.max(0, this.verticalTypedValues[this.verticalTypedValues.length - 1]);
+                }
+                for (let i = 0, length = rightBorder.length; i < length; i++) {
+                    if (NinePatchBorderInfo.isScaleColor(rightBorder[i])) {
+                        this.paddingTop = i;
+                        break;
+                    }
+                }
+                for (let i = 0, length = rightBorder.length; i < length; i++) {
+                    if (NinePatchBorderInfo.isScaleColor(rightBorder[length - 1 - i])) {
+                        this.paddingBottom = i;
+                        break;
+                    }
+                }
+                for (let i = 0, length = bottomBorder.length; i < length; i++) {
+                    if (NinePatchBorderInfo.isScaleColor(bottomBorder[i])) {
+                        this.paddingLeft = i;
+                        break;
+                    }
+                }
+                for (let i = 0, length = bottomBorder.length; i < length; i++) {
+                    if (NinePatchBorderInfo.isScaleColor(bottomBorder[length - 1 - i])) {
+                        this.paddingRight = i;
+                        break;
+                    }
+                }
+            }
+            static isScaleColor(color) {
+                return Color.alpha(color) > 200 && Color.red(color) < 50 && Color.green(color) < 50 && Color.blue(color) < 50;
+            }
+            static isScaleType(typedValue) {
+                return typedValue < 0;
+            }
+            static getValueUnpack(typedValue) {
+                return Math.abs(typedValue);
+            }
+            getHorizontalTypedValues() {
+                return this.horizontalTypedValues;
+            }
+            getHorizontalStaticLengthSum() {
+                return this.horizontalStaticLengthSum;
+            }
+            getHorizontalScaleLengthSum() {
+                return this.horizontalScaleLengthSum;
+            }
+            getVerticalTypedValues() {
+                return this.verticalTypedValues;
+            }
+            getVerticalStaticLengthSum() {
+                return this.verticalStaticLengthSum;
+            }
+            getVerticalScaleLengthSum() {
+                return this.verticalScaleLengthSum;
+            }
+            getPaddingLeft() {
+                return this.paddingLeft;
+            }
+            getPaddingTop() {
+                return this.paddingTop;
+            }
+            getPaddingRight() {
+                return this.paddingRight;
+            }
+            getPaddingBottom() {
+                return this.paddingBottom;
+            }
+        }
+    })(image = androidui.image || (androidui.image = {}));
+})(androidui || (androidui = {}));
 /**
  * Created by linfaxin on 15/11/2.
  */
@@ -8892,6 +9190,12 @@ var android;
     (function (R) {
         var NetImage = androidui.image.NetImage;
         var data = {
+            "actionbar_ic_back_white": [
+                null,
+                null,
+                null,
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAAzCAMAAABR9YM8AAAAclBMVEUAAAD///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////9eWEHEAAAAJXRSTlMA+wjy9g/JaUDVsqZONr6IFePdmHhbJBzr6c4tVEm9o5OCcF0v6lgICQAAALZJREFUOMu11EcSgzAQRFEZRBbZJjtb97+iS1PFrpuV+Nu3UphRpFq3KSNr7cLJdpCu1pVweiNKhGpOL0S3i6Me0Sb0RGSECkR3oRxRqoUCShWiMqT0E4ojQOtEaRDKGkQtpVGoGxF1lJrMUTtQmhFFi6NpRRQ7ChGpQqhUKHkVo2DZfmh6+0t0gLFvTLVgcICVBwTf9oHRCOa+cdtHhQ9m4Ru/9gATwf4crBVfdlpxnBXpE87mD+wlJVcMMSJcAAAAAElFTkSuQmCC"
+            ],
             "btn_check_off_disabled_focused_holo_light": [
                 null,
                 null,
@@ -8951,6 +9255,36 @@ var android;
                 null,
                 null,
                 "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAANlBMVEVPT08+Pj4+Pj5KSkpAQEAAAAA/Pz9PT08/Pz9PT09PT08/Pz9AQEBAQEBPT09PT09CQkI9PT36oQq5AAAAEXRSTlMm1MgyiACTFp4eAZeNggYHXQY8LIYAAAExSURBVGje7drBbsJAFENRtx0YJlAg//+zTaRWruQNU+NFxfMa3SOxSBZ5OGy79oGnb/Tb3t6ApSO0vuzAMhDbWDagI7h+wBXR3dARXcdAdAO1Wq1We6mdjojutK6Twtuj++lTCABbn8LDwNT/I4IPaH/bOQGc11+7PxXQfoMBGH0DOErfBPw+gVCfgNv3gYv2fcDvE7D6PtCk7wCns99XQN8mfl8Bvk3svgLsU3D7CvBpf8H3Pu0+AfYpaJ+/ngfuUpO+AejzRvomoIL0PUAF6dsABe3bgAra9wEK2vcBCtr3ARG07wMUpO8DIrCfACg0JAAKDQmAQkMCoNCQACg0ZACugAJeC/iY2F+Auc0D75NDrVar1Wqz+0/fxEf8aCB+9pA+3IifnuSPZ5LnP9e9/QXc5ydUPu9cjgAAAABJRU5ErkJggg=="
+            ],
+            "btn_default_disabled_focused_holo_light": [
+                null,
+                null,
+                null,
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABiCAMAAADwfaQ5AAAAM1BMVEUAAAAzteUAmcwAAAAAAAAAkMAAmcwAjbwAmMsAM0UAAAAAgq4AfqgAbpMAgawAAAD/AAA0FdE+AAAAD3RSTlMAHz4TD0I5PSkZCjIyDQj2gUbVAAAAn0lEQVRYw+3ZSw6DMAxFUZq2zodP2P9qKzGqGFjYqkoC9y7gjDLJ83CoujWc0QoICHgJcN+SJJiStGjeLMGczAqYgqOkgOIBRQGDq/+Dj8MBdgFWQEBAQEBAQD9YAW8Atv8OAQEBAQE3sPkPOGAvYMvrnPwaHD3eqIA52r2YFbDkKb5NxSkXbRh/OtKX9vIyVnq7BQAC+sD1K8/Beid8AI8uHiWs1BycAAAAAElFTkSuQmCC"
+            ],
+            "btn_default_disabled_holo_light": [
+                null,
+                null,
+                null,
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABiCAMAAADwfaQ5AAAAbFBMVEUAAACZmZl5eXl0dHQAAAAAAACHh4dsbGyWlpZbW1uNjY1kZGQjIyOWlpZwcHAAAAAAAAB4eHhubm6Li4teXl5aWlqUlJSIiIhzc3NgYGBTU1N6enqMjIyXl5eIiIiXl5eMjIwAAAAAAAD/AADhocx4AAAAInRSTlMAJ4CAJh6AgICAgIAwJxUUAnp6eHh2dGNjX15cWjIxMDADER06CAAAAMlJREFUWMPt2TkOgzAQhWHALIltMPu+Be5/x0hUUYoRQxOjvP8An1y4mRnnVNuR84t2gAAB2gAmY/1gVY8J5SeFlCErKQtKHMJmcllNTTgQYOYtLrPFywhQeC47TwAEaBu4AQQIECBAgACvgxvAPwDt/4cAAQIECPAArR/AAd4BjLleTIK5WLngKnIC7KJ2jlnvm9uoI0BdKhWxUqrUBOjrvnqyqnrtE6DxL2SIxfgr4HtBSoBOagJmJr35cQEgwHPg/tGVg/WX8AZv3Su8QPHBAAAAAABJRU5ErkJggg=="
+            ],
+            "btn_default_focused_holo_light": [
+                null,
+                null,
+                null,
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABiCAMAAADwfaQ5AAAAS1BMVEUAAAAzteUAmcwAAAAAiLUAAAAAmcwAHigAmcwAAAAAgasAhLEAk8QAksIAa44AcpgAmcwAAAAAAAAAAAAAAAAAmcwAmcwAAAD/AAAMZPkMAAAAF3RSTlMAZsyA5mbAiYgH3NvUy8S8tm5fSz8gFpzXpUMAAACoSURBVFjD7dk5DsMwDABBR0l0+L7l/780gKsgBWGxiGV49wFTsSFZHCruFWe0AQIC5gCuvjdJ9X6V/MWa5OwigN4o8gJoNaAVQKPq/+DjcID3BCMgICAgICCgHoyANwDzn0NAQEBAwB3MfgEH1IGXvs41Gq8RwE4DdgLoqjqVqysngJNry1dSZesmAQzDM7khSIfxMI/vpMY5XPwXAAh4Erh9pXlY/wgfdZAio63fx68AAAAASUVORK5CYII="
+            ],
+            "btn_default_normal_holo_light": [
+                null,
+                null,
+                null,
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABiCAMAAADwfaQ5AAAAflBMVEUAAACZmZkAAAB3d3eTk5MsLCzb29sAAABZWVnAwMAAAAAAAACYmJijo6OLi4sAAAAAAAA0NDRSUlLIyMhvb28WFhagoKAAAAAqKirY2NhISEjNzc0mJibDw8NfX1+5ubmzs7NBQUF+fn7R0dGRkZGioqIAAAAAAAAAAAD/AAAgdn43AAAAKHRSTlMAZhB2aLOnMIiEBAFnbWwOCqONino4FxOolZWTi4d+fXlzcW1kVSwjhumNDwAAAOlJREFUWMPt2ckOgjAUhWEFnFpoC4I4Mo/v/4ISVsakxIsaMJ5/3y9p0k3vXbxU07eYohYgQIAzAPkhP61JnfID19i9t7/sbztCt+7AgMjKOHGWpJwkLpkWVIXTeUTRKZQWlNlyRJnUgoZp0T3LNAACfA9sAAIECBAgQIDjwQbgH4Dzf4cAAQIECLAHZ/8BB/gF0P4s6AsyaAt/AIxMYVM9M9KDMvV8Qbm1bQnfS6UWVIHrnr0tIe/suoHSgiwMrscVqeM1CJkW5Cysqw2pqg4ZHxiMMyUNUlIx/tO7AIAApwLbh8YsrJ+EOyFWMqRTaWfwAAAAAElFTkSuQmCC"
+            ],
+            "btn_default_pressed_holo_light": [
+                null,
+                null,
+                null,
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABiCAMAAADwfaQ5AAAAclBMVEUAAABmZmYAAABkZGRaWlo3NzcAAAC7u7tNTU2Xl5cAAAAAAABycnIAAAA8PDyioqJISEiJiYlXV1eGhoYAAABcXFy6urqnp6eamppPT08uLi6xsbE9PT0VFRUaGhoAAABiYmJiYmJ4eHh3d3cAAAD/AAABlB2hAAAAJHRSTlMAZg9nbowwmnd+BAFrCoSCe3ZwFxRskomAcXFoYzkyI2RjU1NCIACPAAAA10lEQVRYw+3ZyQ6DIBSF4Sp2AlFRtM520Pd/xRpXTROI1400Pf+eLyzYcO9hVePSYY8mgAABOgCKrCnOpIomE2ZeZPEtLq+EyvmAReQvpUKPVKjUkxtB+QhnjyiGd2kE/dzbUO5bQEb3WGABA4AAV4AjQIAAAQIECHA7OAL8A9D9dwgQIECAABfQ+Q84QPfBlDGyx1ILWAV0MKgsYJukjBHvl7RmUPZRlFxIJVHUSyPIdVcfidWd5kZQcD2ciA2aC8tgnEufmOTip3cBAAHuBU4fbVlYfwlvr34uoI6kYcYAAAAASUVORK5CYII="
             ],
             "btn_radio_off_disabled_focused_holo_light": [
                 null,
@@ -9035,6 +9369,27 @@ var android;
                 null,
                 null,
                 "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJAAAACPCAMAAAAiGKLEAAABF1BMVEUAAAAzteUAAAAzteUzteUzteUzteUzteUzteUzteUzteUzteUzteUzteUzteUzteUzteUzteUzteUzteUFExkCCgwebIgzteUzteUokLYzteURPU0zteUdZ4ILKDIzteUzteUzteUto84zteUWTmITR1ozteUzteUzteUzteUzteUzteUzteUzteUzteUmiK0sm8UgdJIRPE0IHygGFBouo88KJC4YVm0NMT0oj7UPNkUxrtwtoMslhKcqlLwzteUrm8Qjf6EieZkzteUMLDgvqdYxrt0snscplLsea4gqlr4bYn0ysuEbYXsysuIkgKITQlQwqtgjfZ4heJgyseAlhKgaXXcfcY8aXHUvp9MWT2QZV24zteUFHZYuAAAAXHRSTlMAgIACBQgNGCZTMgs2EGYVHB8SI4CAgF1OgEOaKrOAcks6gEeAgHZuYlhAPS55as2AgICAiOmOgIDTloDmyoB834CAf5KA9+PYttuvgID8xpzyw8CAgK26gO2jqAdlyAAAAAokSURBVHja7NrXetNAEAVg71n1Ysm9xiV2lLiGNEiCUyihhIQAobPv/xxYJmCt1oYIsMwF/7Uv5hvNzoxWTvz337+BUpr4Z1DJTKuqmjalfyEoKimqZnQbxUbX0FRl6TFRUzUaGx7xeRsNK7XckKhka606mfJ0Q5WXFxGVHaNDeMOuu7yIJMdKkrBBeWkRUdtIEtGgq0qJZaCm1iGzDA17KSmS3BaZrZNZxkOjaatO5mgt4aFRWSuQedYNJfYUUadM5tNTsafIrCbJfJ4Vc12LCVpdcopkjU/QFtZCKYq3imi6S4Lu5IAtPkVurCmSMvwR2weQvU8C6rEeNGo3T0jAO/guSVBDjTEgKaWToBpwDeTOuAFSlROxUQyuST8A8OQQaJOgrhNbiqjaCFfQG3YeTlEhE1tZy3xTPPYTxNhhqIpOYmuONN0jQWvAc8bYMyB7QQKKcZ18KdPhejSAPTZ2F3jIlXXfTMRCsTwScA+oMN8RUCNB5RjKWizpt1nglE0AKMVd1mJJPwQes28+gJ9oJ7EMNGr3wmf+iH3zKXzyi+6iAxK79B0AL9mNCpCPvVub/fVQSb9g3x0AOySol154iqhTDpf0U/bDLlCKYU8TFg+xpOeUdd1YeCtSrMGskg6U9f34WpHYhFaDJe07BLbia0XiLn0JvGJBm8A+CRhYSmKRqN0kQTvAMxb0EsDqghdHSiWfLJumomS4JlQCdhnvFfCRv3lIK6Ypy5Lvt69GxyGYim07jqq6biqj+ap9wzCsIrdLt/3Fg3cebkWFnmEY/WpVG8ukXFdVHSdtK6Ys0Vumw7QdN6P1rWa33GoUdb1T2EiODdfrnjcgQRdZYMQ4Yisijzyvvj5Mjm0UOrpebLTK3Z5lVDOumlZkSn8WjKw4rmb0WnohWR+QX3owbUJcK2qTXzqpDwt6o2tVU449J1dUUlzNKutJj9zWNnDFwvaA3FtyS4Nkp9WsptIypWI4KauYPCERnOWA10xw6C+OUQw7Pc2Rafg+tV/0SDR5oMJEV8A2iWij6ZqUi8ftDUlUNeCAiZ4AOCMRDRoZhQbjKXskqjsAGIfbiqLStWlEktPzSGQfp5sQ7wCokeiKP65KqdIfkuh2/OV+psn4iOxRWZW+3+8WSXTH3NjgvAcuSXTDvsItpRHd48eGOD6ia90MYv82LDpudxXHxzGJgF+e6K+e2Flp4l3+xse1sW3gLptnBdj3f3Qvf+NhaeIOEYkLr6RtkLDV0la+vbZdq9Uw3wGbZw/z7dRq42Dz+VnR9exJCRl1LpZ8u5bDLVyz+Y5wG7W1y1LoGnCytjcfcSuOYLcy8XnlxvXm2MFr9lOn/o+uVm58qUw8hqB2xl3d+lVtN/kJ7rtbebFytHkwGo3Y37Y3Gp1vbj5fmUQXulIqqnTyyLzgE8sCuVMWh70KgAfcuXdmvEiUcgBiiMiPJzz0mpOipimdCBGds0UbHSJ8+7/el2d+RznOAthki3W6y8XDvVUqhjcjomu2SM8gxOOXEJ3e+HBWawDes8W5ApB7N2+4Ulv4enrfP/2VEVuQFQBZoVP768c3ktqaNcyxu5jSHlUA7Atbrj79lk3ljE7CtnIAjtjfd+6Xc/tC2POrwaVa6YsDtpSFv6T+bUcQ2o9v3UpLiSkpbSXFkb8P4PDpAsqnJG4ePZV7f6Uz/1dy0ea3jD/3tZ2rbWoaCMJzl0JTSitpCgm11qat9g0wgrZaR0tLLSpQCii+jP//d+hl1PWydxkv23H84PPBT8Is+zx7u7e7udORkE9DZY8QELIIYSqE9HFl9jziSD7YHrBoo6Mo5Y9WR9tC0LU9ZQjtANsjLCrtdRnCiwerou10JsqfkCEUwR4ZmYLtM6aO/3uL1dCl6It4G3d0vStr3W3uM4RQ0Daj0TY/E3RNGEauWlDYA5f8XltBW4sT8//xQEPXuA5XerVF2c0O00Tb2ZxE11BB1/2Kk8f2YGljhCL/D47T0XWro6uzieSMkVm362OG8B5oS0VXg2F090pYPhhW3lEJiU0EbbfzVLlreK6Qj28X0NxBKySPYTQi2uYpctcHhnHQQ/JJ2iit+icM4VwUSddmVwvIXTI8sx1Va92pKGnj/IspYS2GceLbcPpQaNvlfGlaPA8VyavnwOlDoq1lmvtPOS9T6QLacLRFww0jDDh/RaAL0VaMMzYwjPq3cc4eosPZhLZSsI/7iqacyf1G31mzKEP6+7FOsHHSfxLrEfdIo/yC1MxqoE4whr5HDD0gygzaj418b9Pc4mtSQrXTzqlxP7QGI18DwCwGzamJWwOvYdpigiW0OaDHkXbPoynvu/JluqvqoVR0OJn0mzldqR+a7q5/BesX0CdLhzVpCPICJppmGHE+Qe3xVCj0Y5l+9DUNrjlv4b0retC3Emuhq8SaqIwDnx70ZbGuqMHzGZ9dLpISLDnwYV8RBnYDfUtMYPZOn2AvqEtFuF18oU2sz6MRgfjn40I30KvJgZ/OoK1cbJfqnVIhS2HKp/OpMGl2rD2sqct7MHKAoF/o3HMkJPL6UDu0WsqBfxKsp5PQWA76u2r3wCU5ctLoWB345OwBEtIH/ZsnkXugPomcdK0PfBARWUJHOOivzsA90EwCJ8mBHxJEBBJCtRlyzy4DgJMu8f11hyQiKD0g098q3NOCrBlz0mlc+odUEZUqsTX3l8g9cGfH/W35v88535ZXUi2ihMqcf/5tofMeuEeFHaSkkZw9ivYaLZGFUt54Du7RIIycdDP/PXvsENIZTPNBQmeQuZB7dE4avNGJqFKi1UIPoHl2ySG4EFC4LZ/+KhvLpJoIlnDlU+jNQPQLL87ZH2BSBnGLk6hBWdq1pHL6Becc2HoWMj1wO3kW8faF8wmlsM5Ix+JulMjmN1GdMTXZeqrxH7PSG84/oaORpOnF5XaUKdRi7jZz6jW2xxFvb5/GVd0zUDXeUBlyfv0kga2Dipt1Nj01b0MemRTrgtTvEINMoKY5erqiI5Yp2HW1k8Lox+NhljU0qIdWZo404mlX3OgZAiu/FXQ0Uop+wTbJoCDmodpjluCen/2tqsZJbPcw5qF6liLqcCdkWvdAwzDJSawx/UAQNaSyZMSfaLDWvjvpPtOAkMwg2SfhoOfCIxbgJAg3BEK6h3JIh/3cHmxBx166aDMdYNuM9uUohhfAGx+onbyRGzMEQusT7fAgtJs2zLoU2/Ruv5PIWDVvYAve4cFsbWR13W8QN+INbeYQ34jAbOlhiTdccvsMgDZzTGHlXTVpxQpiS8ObE3RPlH8QbOaYDV9shUUHzSqKLf1Aye17qtldyZQw2CuI6ajYrGbRM0OJUrL73ljWnw+bA2ne8oFvPcbFXF9vjt4kN/A7vzJcuxuYz+7w1zBe0ctVNqtb8IWKiUkF8WKS7xU73Xp/zymZ6xl/L+Ta7tYd8WER4U0p17adbAEcTIElPg1bwe/4lx7e+o//+Hv4BrTtIsYUPbP9AAAAAElFTkSuQmCC"
+            ],
+            "dropdown_background_dark": [
+                null,
+                null,
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEcAAAA2CAMAAACiEHRJAAAAflBMVEVAQEAAAABBQUEAAAAAAAATExMlJSU+Pj5BQUEAAAAAAAA4ODggICAvLy8WFhYAAAAAAAAAAAAAAAAfHx8NDQ0AAAAvLy8kJCQgICAQEBAAAAA3NzcWFhYkJCQXFxcAAAASEhIAAAAjIyMAAAAwMDAjIyMAAAAAAAAAAAAAAACu+DqjAAAAKXRSTlPmCekADkqr4e4qFcCA2KhEYwUShjwb1K5/Nge9pZ2YXUxALSTIrGZVSewvjJ0AAAC8SURBVEjH7da3EsIwEEVRr5AjJig4Z5uk//9BJNFBw+zQMLO339Ns84Lde+abPq6cs6q6rnN0avWOAD10e3zdoEFYB/hcsQQfq2YO3gmjmAXYWByFHAw55JBDDjk/dgw5f/UvcsghhxyUEyQMm3f8nofweinL8oCtCsE5LTS5Gsf+iKxXDbTWETzb9OM+nXHdpjTjwjkgi7TRywnZUkhwjoeKLUXnGOs4iEuZoQPhHQeJFvBZxTk+g+8FPAE5Rz/0d6kkJAAAAABJRU5ErkJggg=="
+            ],
+            "ic_menu_moreoverflow_normal_holo_dark": [
+                null,
+                null,
+                null,
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgAQMAAADYVuV7AAAABlBMVEUAAAD///+l2Z/dAAAAAnRSTlMAgJsrThgAAAAdSURBVDjLYxhhoP7/kOcgwGjoEB06o0EF44wsAABBWUMn9krmtgAAAABJRU5ErkJggg=="
+            ],
+            "menu_panel_holo_dark": [
+                null,
+                null,
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIIAAABCCAMAAACsNf57AAAAw1BMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAsLCwVFRU0NDQgICA1NTUfHx9OTk5DQ0NEREQ8PDwwMDAAAAAsLCw4ODj/AAAqKiogICAiIiIkJCRKSkpMTExHR0dFRUVOTk46OjoxMTEiZHnYAAAAMXRSTlMABA0CJBAIChgTGyAqNlAWSWc8X3aJfI8eLidAMkU5TFtWPW9Ug3nti2Dt29rj4srKKLM+WwAAA8dJREFUaN7t2dlW2zAQBuAsTqLIK06gtmRbjhPC2oUlFFoovP9TdUZGh0SmoaeVwBf5H0D6jmacyOPOq7m0lE47s+p8eHaEHWFHeJPQX0vXQNbX+xvClp0NWbYT1ObDOiNjGdZREI3QBKjdewajHE3ESgfg7rj3ADI2GFwPJehQiCZBCRCA24fPIf8VtQoyEKEMDYICjOrtQ0IpTTCugSQYWJCENWOkEE2CrMEzQG7uGIuEPCNkNV4joEACnJMv9w9a7vX8eC0/G/ml5/OJgwhpeCZcvgi6KBiE4cm3x8drY3ncyMPD15MwHKABS6EIqgzyDEJKz66fni5s5enxjNIQz0GWokGAMyA0ObImQML1UUIJnMM6QSL60Ai9HpxB4rCrC6u5Yk4C59DrQTs0CNAHics82wSPuQn0g0aoyzAm1GVpZpuQpcylZFyXYp2AvUigDJlvm+BnUAqCHblJGI6wE1wv9WPbhNhPPRe7YTRsEhIgFJVtQlUAIWkSsBmJ66RZldsm5FWWOi7Bhnwh9GsCNqPP7RO4jw1ZE/oaAZqxyCPbhCgvoCEbhCEQCHU8IAjbBAEEz6EECEOdkDDPj6PANiGIYt9jySuEMUVC9R6ECgl0rBFGAySkBRcL24SF4EWKhMGoXYSuJLgeEma2CTMkeK4kdJuEmAf2CQGPd4TWEvqKULwPAduxfQ9lKwgt+IH+0L8piPZnbdnQ/LPuaFcWcXRzYTFXR6JxZcFsXNyOz+9utufqn3Nzc368cXHrrBN69fWV5+Xx6e33t3K7NXd/zOlxmfP6+tp7IWiXeC6CcrI3ny4PDvf39z8ZCSx0eLCczvcmZSC4dolfqemCIsBjKWblXm04BIWJwEJSsFfOBDySitDdJNQ/TvBMQDcEi3ICiPl0ulweGMhyOZ3OATApFwF0AjwP9Q+TIsio11qHpVnFo2BWThABCiOZS8CknAURr7KUOeq1Vs2aXl7uiSxFwXMhFrMSGWaC25ezhRA5L2QZiHq51whyxMGgFDHPIxEgAhgGUpYICESU8xjKwOSIo0Hoq1ETnAMgiorneRQJIQIDgWWiKM95VQAAzkANm/qKoM+aoB9S348rDgpwGEgO4byKfT+FPtBnTSt97Ij94DAvTbPM94uiiA0ElvH9LEtTjznYB5uDx1Vz7kjRwDypAIeBZJnc32MooNrcUR8A4zkAAhQ4/GUgMRJYSA6BEwqA+gzaOYNGg0SoWXxICDUYQkI1h1eD+BZ+j1CfZWoFngVKjEV9HML9JaDfsm9TKy2XlqPv1/kNylczeSvTmjMAAAAASUVORK5CYII="
+            ],
+            "menu_panel_holo_light": [
+                null,
+                null,
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIIAAABCCAMAAACsNf57AAAA5FBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADd3d0AAADJycnMzMy6urrs7Ozu7u51dXV8fHwkJCRjY2PQ0NDb29vt7e3s7Oz39/fy8vLv7+8AAADx8fHk5OT/AAD39/f19fXm5ubr6+vo6OjHx8fKysrNzc3Pz8/R0dHT09Pz8/P5+flMDi8tAAAAOnRSTlMAAwkNFwYkEBMgHDsqNlBJGnaJfF+PZycwLUEzPk1HW1ZEb1JkgWCGaP1qY+ff3c6KiVsm+vf09OvngRpQJAAAA7pJREFUaN7t2Wl3mkAUBmBsCJEdY1qWYVUkLtnTVY1ZuqQ1////9F6QAKOx51Qm8YNvPod5zp0ZmLlyKzNhFG47M+PePDvCjrAj/JPQYJi1BHr8/ZpTKNYSirHfMUghoQg0oBh+r8YUjBKCJhTj49gHkGaNweehpFC8SMgB8F98rUHGAkERaAAOj6MbhgQRa4oEMQx0ICNH0IS8BBkgG16oLRkjQ+SFoAkoyADXo2/zu7W5/c88Pd1+HV0jAg05YVIqAgoOeH50Pp8yynx+dz7i+QM0PJdhUhU0YQrOpmOGmZ7BdDTLhkl5GrAGkvh5zDLTL6KEdSimYgJ/GQH2AtZAML+PmebBFLAOsC8oAk5DWgNTYU1QTKxDNhUFoYEEXAiiaRPWBGKbIi4HJDTKBFyLOA2WypqgWjgVsCKrhH0gNGEaFFuVWRNk1VZgKppA2F9FsGSXNcGVrZUEXIyGKNjEjVgTIpfYgmjggiwIjZwAK8HxWRN8B1ZDTmhQBMEkaqSzJuiRSkxhNUESFCL7HmuC58tEEaRVBEMyFVXWNdYETZdVxZSMZUITCLbqvgbBVW0gNKsEfDciQXa9LmtC13NlJOD7kSaIQHBeg+AAQVxNUCwghKwJIRAsZQ1BY0/QdoQdoULY1k35Bq+m7XpBlz9T9+PlsP1McfTH+hNTw8Ng+WPNVY4scqSfDMYMc3OiRzJ1ZMFUDm4Xp4+Dmw1z/0JuBqeXlYMbVybs5cfXq4vTH6vzcym/qDyW8ruUP4t8PLm8yo+vewWBPsTrWpAMO61Wr3d8eHj4vobAY457vVarM0wCTacP8TOKANvS98Ig7nda7TYgQLF5jgHQbrc6/TgIPR+2JE0o7pQG7glYDVo3OAIEVAIcdaQFFQDAUdDVYCXgfjCKOyUQMBmBxzslcR1dC4Mk7g87oKgl8KBhP06CUNMdl+Cdks8IXInQyC/3eKt0It3rhkGQJHH8oYbEcZIEQdj19MjBG2V+uW/khGqLw1QsVXYj39MAATmqIUGAAM3zI1dWLcXMWxw0AQxphwHqQADhRL6v656n1RDP03XfjxwAEKhB2l0AQUGge02CaVsqIpwIGODYND4MHzkIUC3bFOhe04xuO/IGIhTbsogKkJoCjyKWZSsIyGqQC5BA9x0zAyBQQYhaQwjB8QGQCqi+I9V9RUTW/k2bvyZIagk8KG0CSwjIO8Db2INODYjIe/HgWETaKMYifNGHBwAKtvD3CDQ8I1IHSmpL8eMQAjBb9tvUjMqEcejxuL9XNZodPDUZeAAAAABJRU5ErkJggg=="
             ],
             "progressbar_indeterminate_holo1": [
                 null,
@@ -9140,6 +9495,7 @@ var android;
             ]
         };
         var imageCache = {
+            actionbar_ic_back_white: null,
             btn_check_off_disabled_focused_holo_light: null,
             btn_check_off_disabled_holo_light: null,
             btn_check_off_focused_holo_light: null,
@@ -9150,6 +9506,11 @@ var android;
             btn_check_on_focused_holo_light: null,
             btn_check_on_holo_light: null,
             btn_check_on_pressed_holo_light: null,
+            btn_default_disabled_focused_holo_light: null,
+            btn_default_disabled_holo_light: null,
+            btn_default_focused_holo_light: null,
+            btn_default_normal_holo_light: null,
+            btn_default_pressed_holo_light: null,
             btn_radio_off_disabled_focused_holo_light: null,
             btn_radio_off_disabled_holo_light: null,
             btn_radio_off_focused_holo_light: null,
@@ -9164,6 +9525,10 @@ var android;
             btn_rating_star_off_pressed_holo_light: null,
             btn_rating_star_on_normal_holo_light: null,
             btn_rating_star_on_pressed_holo_light: null,
+            dropdown_background_dark: null,
+            ic_menu_moreoverflow_normal_holo_dark: null,
+            menu_panel_holo_dark: null,
+            menu_panel_holo_light: null,
             progressbar_indeterminate_holo1: null,
             progressbar_indeterminate_holo2: null,
             progressbar_indeterminate_holo3: null,
@@ -9193,6 +9558,9 @@ var android;
             throw Error('Not find radio image. May something error in build.');
         }
         class image_base64 {
+            static get actionbar_ic_back_white() {
+                return imageCache.actionbar_ic_back_white || (imageCache.actionbar_ic_back_white = findRatioImage(data.actionbar_ic_back_white));
+            }
             static get btn_check_off_disabled_focused_holo_light() {
                 return imageCache.btn_check_off_disabled_focused_holo_light || (imageCache.btn_check_off_disabled_focused_holo_light = findRatioImage(data.btn_check_off_disabled_focused_holo_light));
             }
@@ -9222,6 +9590,21 @@ var android;
             }
             static get btn_check_on_pressed_holo_light() {
                 return imageCache.btn_check_on_pressed_holo_light || (imageCache.btn_check_on_pressed_holo_light = findRatioImage(data.btn_check_on_pressed_holo_light));
+            }
+            static get btn_default_disabled_focused_holo_light() {
+                return imageCache.btn_default_disabled_focused_holo_light || (imageCache.btn_default_disabled_focused_holo_light = findRatioImage(data.btn_default_disabled_focused_holo_light));
+            }
+            static get btn_default_disabled_holo_light() {
+                return imageCache.btn_default_disabled_holo_light || (imageCache.btn_default_disabled_holo_light = findRatioImage(data.btn_default_disabled_holo_light));
+            }
+            static get btn_default_focused_holo_light() {
+                return imageCache.btn_default_focused_holo_light || (imageCache.btn_default_focused_holo_light = findRatioImage(data.btn_default_focused_holo_light));
+            }
+            static get btn_default_normal_holo_light() {
+                return imageCache.btn_default_normal_holo_light || (imageCache.btn_default_normal_holo_light = findRatioImage(data.btn_default_normal_holo_light));
+            }
+            static get btn_default_pressed_holo_light() {
+                return imageCache.btn_default_pressed_holo_light || (imageCache.btn_default_pressed_holo_light = findRatioImage(data.btn_default_pressed_holo_light));
             }
             static get btn_radio_off_disabled_focused_holo_light() {
                 return imageCache.btn_radio_off_disabled_focused_holo_light || (imageCache.btn_radio_off_disabled_focused_holo_light = findRatioImage(data.btn_radio_off_disabled_focused_holo_light));
@@ -9264,6 +9647,18 @@ var android;
             }
             static get btn_rating_star_on_pressed_holo_light() {
                 return imageCache.btn_rating_star_on_pressed_holo_light || (imageCache.btn_rating_star_on_pressed_holo_light = findRatioImage(data.btn_rating_star_on_pressed_holo_light));
+            }
+            static get dropdown_background_dark() {
+                return imageCache.dropdown_background_dark || (imageCache.dropdown_background_dark = findRatioImage(data.dropdown_background_dark));
+            }
+            static get ic_menu_moreoverflow_normal_holo_dark() {
+                return imageCache.ic_menu_moreoverflow_normal_holo_dark || (imageCache.ic_menu_moreoverflow_normal_holo_dark = findRatioImage(data.ic_menu_moreoverflow_normal_holo_dark));
+            }
+            static get menu_panel_holo_dark() {
+                return imageCache.menu_panel_holo_dark || (imageCache.menu_panel_holo_dark = findRatioImage(data.menu_panel_holo_dark));
+            }
+            static get menu_panel_holo_light() {
+                return imageCache.menu_panel_holo_light || (imageCache.menu_panel_holo_light = findRatioImage(data.menu_panel_holo_light));
             }
             static get progressbar_indeterminate_holo1() {
                 return imageCache.progressbar_indeterminate_holo1 || (imageCache.progressbar_indeterminate_holo1 = findRatioImage(data.progressbar_indeterminate_holo1));
@@ -9321,16 +9716,19 @@ var android;
     })(R = android.R || (android.R = {}));
 })(android || (android = {}));
 ///<reference path="../../androidui/image/NetDrawable.ts"/>
-///<reference path="../../androidui/image/OverrideSizeDrawable.ts"/>
+///<reference path="../../androidui/image/NinePatchDrawable.ts"/>
+///<reference path="../../androidui/image/ChangeImageSizeDrawable.ts"/>
 ///<reference path="image_base64.ts"/>
 var android;
 (function (android) {
     var R;
     (function (R) {
         var NetDrawable = androidui.image.NetDrawable;
-        var OverrideSizeDrawable = androidui.image.ChangeImageSizeDrawable;
+        var ChangeImageSizeDrawable = androidui.image.ChangeImageSizeDrawable;
+        var NinePatchDrawable = androidui.image.NinePatchDrawable;
         const density = android.content.res.Resources.getDisplayMetrics().density;
         class image {
+            static get actionbar_ic_back_white() { return new NetDrawable(R.image_base64.actionbar_ic_back_white); }
             static get btn_check_off_disabled_focused_holo_light() { return new NetDrawable(R.image_base64.btn_check_off_disabled_focused_holo_light); }
             static get btn_check_off_disabled_holo_light() { return new NetDrawable(R.image_base64.btn_check_off_disabled_holo_light); }
             static get btn_check_off_focused_holo_light() { return new NetDrawable(R.image_base64.btn_check_off_focused_holo_light); }
@@ -9341,6 +9739,11 @@ var android;
             static get btn_check_on_focused_holo_light() { return new NetDrawable(R.image_base64.btn_check_on_focused_holo_light); }
             static get btn_check_on_holo_light() { return new NetDrawable(R.image_base64.btn_check_on_holo_light); }
             static get btn_check_on_pressed_holo_light() { return new NetDrawable(R.image_base64.btn_check_on_pressed_holo_light); }
+            static get btn_default_disabled_focused_holo_light() { return new NinePatchDrawable(R.image_base64.btn_default_disabled_focused_holo_light); }
+            static get btn_default_disabled_holo_light() { return new NinePatchDrawable(R.image_base64.btn_default_disabled_holo_light); }
+            static get btn_default_focused_holo_light() { return new NinePatchDrawable(R.image_base64.btn_default_focused_holo_light); }
+            static get btn_default_normal_holo_light() { return new NinePatchDrawable(R.image_base64.btn_default_normal_holo_light); }
+            static get btn_default_pressed_holo_light() { return new NinePatchDrawable(R.image_base64.btn_default_pressed_holo_light); }
             static get btn_radio_off_disabled_focused_holo_light() { return new NetDrawable(R.image_base64.btn_radio_off_disabled_focused_holo_light); }
             static get btn_radio_off_disabled_holo_light() { return new NetDrawable(R.image_base64.btn_radio_off_disabled_holo_light); }
             static get btn_radio_off_focused_holo_light() { return new NetDrawable(R.image_base64.btn_radio_off_focused_holo_light); }
@@ -9351,10 +9754,14 @@ var android;
             static get btn_radio_on_focused_holo_light() { return new NetDrawable(R.image_base64.btn_radio_on_focused_holo_light); }
             static get btn_radio_on_holo_light() { return new NetDrawable(R.image_base64.btn_radio_on_holo_light); }
             static get btn_radio_on_pressed_holo_light() { return new NetDrawable(R.image_base64.btn_radio_on_pressed_holo_light); }
-            static get btn_rating_star_off_pressed_holo_light() { return new NetDrawable(R.image_base64.btn_rating_star_off_pressed_holo_light); }
             static get btn_rating_star_off_normal_holo_light() { return new NetDrawable(R.image_base64.btn_rating_star_off_normal_holo_light); }
-            static get btn_rating_star_on_pressed_holo_light() { return new NetDrawable(R.image_base64.btn_rating_star_on_pressed_holo_light); }
+            static get btn_rating_star_off_pressed_holo_light() { return new NetDrawable(R.image_base64.btn_rating_star_off_pressed_holo_light); }
             static get btn_rating_star_on_normal_holo_light() { return new NetDrawable(R.image_base64.btn_rating_star_on_normal_holo_light); }
+            static get btn_rating_star_on_pressed_holo_light() { return new NetDrawable(R.image_base64.btn_rating_star_on_pressed_holo_light); }
+            static get dropdown_background_dark() { return new NinePatchDrawable(R.image_base64.dropdown_background_dark); }
+            static get ic_menu_moreoverflow_normal_holo_dark() { return new NetDrawable(R.image_base64.ic_menu_moreoverflow_normal_holo_dark); }
+            static get menu_panel_holo_dark() { return new NinePatchDrawable(R.image_base64.menu_panel_holo_dark); }
+            static get menu_panel_holo_light() { return new NinePatchDrawable(R.image_base64.menu_panel_holo_light); }
             static get progressbar_indeterminate_holo1() { return new NetDrawable(R.image_base64.progressbar_indeterminate_holo1); }
             static get progressbar_indeterminate_holo2() { return new NetDrawable(R.image_base64.progressbar_indeterminate_holo2); }
             static get progressbar_indeterminate_holo3() { return new NetDrawable(R.image_base64.progressbar_indeterminate_holo3); }
@@ -9372,13 +9779,13 @@ var android;
             static get scrubber_control_pressed_holo() { return new NetDrawable(R.image_base64.scrubber_control_pressed_holo); }
             static get spinner_76_inner_holo() { return new NetDrawable(R.image_base64.spinner_76_inner_holo); }
             static get spinner_76_outer_holo() { return new NetDrawable(R.image_base64.spinner_76_outer_holo); }
-            static get spinner_48_outer_holo() { return new OverrideSizeDrawable(image.spinner_76_outer_holo, 48 * density, 48 * density); }
-            static get spinner_48_inner_holo() { return new OverrideSizeDrawable(image.spinner_76_inner_holo, 48 * density, 48 * density); }
-            static get spinner_16_outer_holo() { return new OverrideSizeDrawable(image.spinner_76_outer_holo, 16 * density, 16 * density); }
-            static get spinner_16_inner_holo() { return new OverrideSizeDrawable(image.spinner_76_inner_holo, 16 * density, 16 * density); }
-            static get rate_star_small_off_holo_light() { return new OverrideSizeDrawable(image.rate_star_big_half_holo_light, 16 * density, 16 * density); }
-            static get rate_star_small_half_holo_light() { return new OverrideSizeDrawable(image.rate_star_big_off_holo_light, 16 * density, 16 * density); }
-            static get rate_star_small_on_holo_light() { return new OverrideSizeDrawable(image.rate_star_big_on_holo_light, 16 * density, 16 * density); }
+            static get spinner_48_outer_holo() { return new ChangeImageSizeDrawable(image.spinner_76_outer_holo, 48 * density, 48 * density); }
+            static get spinner_48_inner_holo() { return new ChangeImageSizeDrawable(image.spinner_76_inner_holo, 48 * density, 48 * density); }
+            static get spinner_16_outer_holo() { return new ChangeImageSizeDrawable(image.spinner_76_outer_holo, 16 * density, 16 * density); }
+            static get spinner_16_inner_holo() { return new ChangeImageSizeDrawable(image.spinner_76_inner_holo, 16 * density, 16 * density); }
+            static get rate_star_small_off_holo_light() { return new ChangeImageSizeDrawable(image.rate_star_big_half_holo_light, 16 * density, 16 * density); }
+            static get rate_star_small_half_holo_light() { return new ChangeImageSizeDrawable(image.rate_star_big_off_holo_light, 16 * density, 16 * density); }
+            static get rate_star_small_on_holo_light() { return new ChangeImageSizeDrawable(image.rate_star_big_on_holo_light, 16 * density, 16 * density); }
         }
         R.image = image;
     })(R = android.R || (android.R = {}));
@@ -9396,6 +9803,7 @@ var android;
     var R;
     (function (R) {
         var ColorStateList = android.content.res.ColorStateList;
+        var Color = android.graphics.Color;
         class color {
             static get textView_textColor() {
                 let _defaultStates = [[-android.view.View.VIEW_STATE_ENABLED], []];
@@ -9416,6 +9824,22 @@ var android;
                     }
                 }
                 return new DefaultStyleTextColor();
+            }
+            static get primary_text_dark_disable_only() {
+                let _defaultStates = [[-android.view.View.VIEW_STATE_ENABLED], []];
+                let _defaultColors = [0x80000000, 0xffffffff];
+                class DefaultStyleTextColor extends ColorStateList {
+                    constructor() {
+                        super(_defaultStates, _defaultColors);
+                    }
+                }
+                return new DefaultStyleTextColor();
+            }
+            static get white() {
+                return Color.WHITE;
+            }
+            static get black() {
+                return Color.BLACK;
             }
         }
         R.color = color;
@@ -10491,16 +10915,18 @@ var android;
             }
             static get buttonStyle() {
                 return Object.assign(attr.textViewStyle, {
-                    background: R.drawable.button_background,
+                    background: R.drawable.btn_default,
                     focusable: true,
                     clickable: true,
+                    minHeight: '48dp',
+                    minWidth: '64dp',
                     textSize: '18sp',
                     gravity: Gravity.CENTER
                 });
             }
             static get imageButtonStyle() {
                 return {
-                    background: R.drawable.button_background,
+                    background: R.drawable.btn_default,
                     focusable: true,
                     clickable: true,
                     gravity: Gravity.CENTER
@@ -10654,16 +11080,21 @@ var android;
             }
             static get popupWindowStyle() {
                 return {
-                    popupBackground: R.drawable.dropdown_background_dark,
+                    popupBackground: R.image.dropdown_background_dark,
                     popupEnterAnimation: R.anim.grow_fade_in_center,
                     popupExitAnimation: R.anim.shrink_fade_out_center,
                 };
             }
             static get listPopupWindowStyle() {
                 return {
-                    popupBackground: R.drawable.menu_panel_holo_light,
+                    popupBackground: R.image.menu_panel_holo_light,
                     popupEnterAnimation: R.anim.grow_fade_in_center,
                     popupExitAnimation: R.anim.shrink_fade_out_center,
+                };
+            }
+            static get popupMenuStyle() {
+                return {
+                    popupBackground: R.image.menu_panel_holo_dark
                 };
             }
             static get dropDownListViewStyle() {
@@ -10675,11 +11106,16 @@ var android;
                     spinnerMode: 'dropdown',
                     gravity: Gravity.START | Gravity.CENTER_VERTICAL,
                     disableChildrenWhenDisabled: true,
-                    background: R.drawable.button_background,
-                    popupBackground: R.drawable.menu_panel_holo_light,
+                    background: R.drawable.btn_default,
+                    popupBackground: R.image.menu_panel_holo_light,
                     dropDownVerticalOffset: '0dp',
                     dropDownHorizontalOffset: '0dp',
                     dropDownWidth: -2,
+                };
+            }
+            static get actionBarStyle() {
+                return {
+                    background: new ColorDrawable(0xff333333)
                 };
             }
         }
@@ -10818,7 +11254,7 @@ var android;
                 this._attrBinder = new AttrBinder(this);
                 this.mContext = context;
                 this.mTouchSlop = view_2.ViewConfiguration.get().getScaledTouchSlop();
-                this.setOverScrollMode(View.OVER_SCROLL_ALWAYS);
+                this.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
                 this.initBindAttr(this._attrBinder);
                 this.initBindElement(bindElement);
                 if (defStyle)
@@ -13472,6 +13908,7 @@ var android;
                             parent.mGroupFlags &= ~view_2.ViewGroup.FLAG_ALPHA_LOWER_THAN_ONE;
                         }
                     }
+                    canvas.clipRect(0, 0, cache.getWidth(), cache.getHeight(), this.mCornerRadiusTopLeft, this.mCornerRadiusTopRight, this.mCornerRadiusBottomRight, this.mCornerRadiusBottomLeft);
                     canvas.drawCanvas(cache, 0, 0);
                 }
                 if (restoreTo >= 0) {
@@ -13752,6 +14189,10 @@ var android;
                     if (h < 0)
                         h = this.mBackgroundHeight;
                     if (w != this.mBackgroundWidth || h != this.mBackgroundHeight) {
+                        let padding = new Rect();
+                        if (who.getPadding(padding)) {
+                            this.setPadding(padding.left, padding.top, padding.right, padding.bottom);
+                        }
                         this.mBackgroundWidth = w;
                         this.mBackgroundHeight = h;
                         this.requestLayout();
@@ -15850,6 +16291,7 @@ var android;
                 this.ok = '确定';
                 this.cancel = '取消';
                 this.close = '关闭';
+                this.back = '返回';
                 this.crash_catch_alert = '程序发生错误, 即将重载网页:';
                 this.prll_header_state_normal = '下拉以刷新';
                 this.prll_header_state_ready = '松开马上刷新';
@@ -15865,6 +16307,7 @@ var android;
         string_.ok = 'OK';
         string_.cancel = 'Cancel';
         string_.close = 'Close';
+        string_.back = 'Back';
         string_.crash_catch_alert = 'Some error happen, will refresh page:';
         string_.prll_header_state_normal = 'Pull to refresh';
         string_.prll_header_state_ready = 'Release to refresh';
@@ -15924,7 +16367,7 @@ var androidui;
             return this._windowBound;
         }
         init() {
-            this.androidUIElement.classList.add(AndroidUI.DomClassName);
+            this.appName = this.androidUIElement.getAttribute('label');
             this._viewRootImpl = new android.view.ViewRootImpl();
             this._viewRootImpl.androidUIElement = this.androidUIElement;
             this.rootResourceElement = this.androidUIElement.querySelector('resources');
@@ -16189,34 +16632,33 @@ var androidui;
             }
         }
     }
-    AndroidUI.DomClassName = 'AndroidUI';
     AndroidUI.BindToElementName = 'AndroidUI';
     androidui.AndroidUI = AndroidUI;
     let styleElement = document.createElement('style');
     styleElement.innerHTML += `
-        .${AndroidUI.DomClassName} {
+        android-ui {
             position : relative;
             overflow : hidden;
             display : block;
             outline: none;
         }
-        .${AndroidUI.DomClassName} * {
+        android-ui * {
             overflow : hidden;
             border : none;
             outline: none;
             pointer-events: auto;
         }
-        .${AndroidUI.DomClassName} resources {
+        android-ui resources {
             display: none;
         }
-        .${AndroidUI.DomClassName} Button {
+        android-ui Button {
             border: none;
             background: none;
         }
-        .${AndroidUI.DomClassName} windowsgroup {
+        android-ui windowsgroup {
             pointer-events: none;
         }
-        .${AndroidUI.DomClassName} > canvas {
+        android-ui > canvas {
             position: absolute;
             left: 0;
             top: 0;
@@ -18207,6 +18649,8 @@ var android;
                 if (index < 0) {
                     index = this.mChildrenCount;
                 }
+                if (this.mDisappearingChildren)
+                    this.mDisappearingChildren.remove(child);
                 this.addInArray(child, index);
                 if (preventRequestLayout) {
                     child.assignParent(this);
@@ -23186,22 +23630,12 @@ var android;
                     exitAnimation = wparams.exitAnimation;
                 if (exitAnimation) {
                     let t = this;
-                    exitAnimation.setAnimationListener({
-                        onAnimationStart(animation) {
-                            decor.postOnAnimation({
-                                run() {
-                                    let group = decor.getParent();
-                                    group.removeView(decor);
-                                }
-                            });
-                        },
-                        onAnimationEnd(animation) { },
-                        onAnimationRepeat(animation) { }
-                    });
                     decor.startAnimation(exitAnimation);
+                    decor.drawAnimation(this.mWindowsLayout, android.os.SystemClock.uptimeMillis(), exitAnimation);
+                    this.mWindowsLayout.removeView(decor);
                 }
                 else {
-                    decor.getParent().removeView(decor);
+                    this.mWindowsLayout.removeView(decor);
                 }
             }
             clearWindowFocus() {
@@ -24245,7 +24679,7 @@ var android;
                 let alpha = new AlphaAnimation(0, 1);
                 alpha.setDuration(150);
                 alpha.setInterpolator(R.interpolator.decelerate_cubic);
-                let scale = new ScaleAnimation(0.9, 1, 0.9, 1, Animation.RELATIVE_TO_PARENT, 0.5, Animation.RELATIVE_TO_PARENT, 0.5);
+                let scale = new ScaleAnimation(0.9, 1, 0.9, 1, Animation.RELATIVE_TO_SELF, 0.5, Animation.RELATIVE_TO_SELF, 0.5);
                 scale.setDuration(220);
                 scale.setInterpolator(R.interpolator.decelerate_quint);
                 animSet.addAnimation(scale);
@@ -24257,7 +24691,7 @@ var android;
                 let alpha = new AlphaAnimation(1, 0);
                 alpha.setDuration(150);
                 alpha.setInterpolator(R.interpolator.decelerate_cubic);
-                let scale = new ScaleAnimation(1, 0.9, 1, 0.9, Animation.RELATIVE_TO_PARENT, 0.5, Animation.RELATIVE_TO_PARENT, 0.5);
+                let scale = new ScaleAnimation(1, 0.9, 1, 0.9, Animation.RELATIVE_TO_SELF, 0.5, Animation.RELATIVE_TO_SELF, 0.5);
                 scale.setDuration(220);
                 scale.setInterpolator(R.interpolator.decelerate_quint);
                 animSet.addAnimation(scale);
@@ -24415,6 +24849,7 @@ var android;
                 this.mContext = context;
                 this.initDecorView();
                 this.initAttachInfo();
+                this.getAttributes().setTitle(context.androidUI.appName);
             }
             initDecorView() {
                 this.mDecor = new DecorView(this);
@@ -28650,15 +29085,14 @@ var android;
                         super(width, height);
                         this.weight = weight;
                     }
-                    this._attrBinder.addAttr('gravity', (value) => {
-                        this.gravity = this._attrBinder.parseGravity(value, this.gravity);
+                    let a = this._attrBinder;
+                    a.addAttr('gravity', (value) => {
+                        this.gravity = a.parseGravity(value, this.gravity);
                     }, () => {
                         return this.gravity;
                     });
-                    this._attrBinder.addAttr('weight', (value) => {
-                        value = Number.parseInt(value);
-                        if (Number.isInteger(value))
-                            this.weight = value;
+                    a.addAttr('weight', (value) => {
+                        this.weight = a.parseNumber(value, this.weight);
                     }, () => {
                         return this.weight;
                     });
@@ -31477,7 +31911,7 @@ var android;
             var TransformationMethod;
             (function (TransformationMethod) {
                 function isImpl(obj) {
-                    return obj['getTransformation'] && obj['onFocusChanged'];
+                    return obj && obj['getTransformation'] && obj['onFocusChanged'];
                 }
                 TransformationMethod.isImpl = isImpl;
             })(TransformationMethod = method.TransformationMethod || (method.TransformationMethod = {}));
@@ -31880,103 +32314,104 @@ var android;
                 this.mHighlightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
                 this.mMovement = this.getDefaultMovementMethod();
                 this.mTransformation = null;
-                this._attrBinder.addAttr('textColorHighlight', (value) => {
-                    this.setHighlightColor(this._attrBinder.parseColor(value, this.mHighlightColor));
+                const a = this._attrBinder;
+                a.addAttr('textColorHighlight', (value) => {
+                    this.setHighlightColor(a.parseColor(value, this.mHighlightColor));
                 });
-                this._attrBinder.addAttr('textColor', (value) => {
-                    let color = this._attrBinder.parseColorList(value);
+                a.addAttr('textColor', (value) => {
+                    let color = a.parseColorList(value);
                     if (color)
                         this.setTextColor(color);
                 }, () => {
                     return this.mTextColor;
                 });
-                this._attrBinder.addAttr('textColorHint', (value) => {
-                    let color = this._attrBinder.parseColorList(value);
+                a.addAttr('textColorHint', (value) => {
+                    let color = a.parseColorList(value);
                     if (color)
                         this.setHintTextColor(color);
                 }, () => {
                     return this.mHintTextColor;
                 });
-                this._attrBinder.addAttr('textSize', (value) => {
-                    let size = this._attrBinder.parseNumber(value, this.mTextPaint.getTextSize());
+                a.addAttr('textSize', (value) => {
+                    let size = a.parseNumber(value, this.mTextPaint.getTextSize());
                     this.setTextSize(TypedValue.COMPLEX_UNIT_PX, size);
                 }, () => {
                     return this.mTextPaint.getTextSize();
                 });
-                this._attrBinder.addAttr('textAllCaps', (value) => {
-                    this.setAllCaps(this._attrBinder.parseBoolean(value, true));
+                a.addAttr('textAllCaps', (value) => {
+                    this.setAllCaps(a.parseBoolean(value, true));
                 });
-                this._attrBinder.addAttr('shadowColor', (value) => {
-                    this.setShadowLayer(this.mShadowRadius, this.mShadowDx, this.mShadowDy, this._attrBinder.parseColor(value, this.mTextPaint.shadowColor));
+                a.addAttr('shadowColor', (value) => {
+                    this.setShadowLayer(this.mShadowRadius, this.mShadowDx, this.mShadowDy, a.parseColor(value, this.mTextPaint.shadowColor));
                 });
-                this._attrBinder.addAttr('shadowDx', (value) => {
-                    let dx = this._attrBinder.parseNumber(value, this.mShadowDx);
+                a.addAttr('shadowDx', (value) => {
+                    let dx = a.parseNumber(value, this.mShadowDx);
                     this.setShadowLayer(this.mShadowRadius, dx, this.mShadowDy, this.mTextPaint.shadowColor);
                 });
-                this._attrBinder.addAttr('shadowDy', (value) => {
-                    let dy = this._attrBinder.parseNumber(value, this.mShadowDy);
+                a.addAttr('shadowDy', (value) => {
+                    let dy = a.parseNumber(value, this.mShadowDy);
                     this.setShadowLayer(this.mShadowRadius, this.mShadowDx, dy, this.mTextPaint.shadowColor);
                 });
-                this._attrBinder.addAttr('shadowRadius', (value) => {
-                    let radius = this._attrBinder.parseNumber(value, this.mShadowRadius);
+                a.addAttr('shadowRadius', (value) => {
+                    let radius = a.parseNumber(value, this.mShadowRadius);
                     this.setShadowLayer(radius, this.mShadowDx, this.mShadowDy, this.mTextPaint.shadowColor);
                 });
-                this._attrBinder.addAttr('drawableLeft', (value) => {
+                a.addAttr('drawableLeft', (value) => {
                     let dr = this.mDrawables || {};
-                    let drawable = this._attrBinder.parseDrawable(value);
+                    let drawable = a.parseDrawable(value);
                     this.setCompoundDrawablesWithIntrinsicBounds(drawable, dr.mDrawableTop, dr.mDrawableRight, dr.mDrawableBottom);
                 });
-                this._attrBinder.addAttr('drawableTop', (value) => {
+                a.addAttr('drawableTop', (value) => {
                     let dr = this.mDrawables || {};
-                    let drawable = this._attrBinder.parseDrawable(value);
+                    let drawable = a.parseDrawable(value);
                     this.setCompoundDrawablesWithIntrinsicBounds(dr.mDrawableLeft, drawable, dr.mDrawableRight, dr.mDrawableBottom);
                 });
-                this._attrBinder.addAttr('drawableRight', (value) => {
+                a.addAttr('drawableRight', (value) => {
                     let dr = this.mDrawables || {};
-                    let drawable = this._attrBinder.parseDrawable(value);
+                    let drawable = a.parseDrawable(value);
                     this.setCompoundDrawablesWithIntrinsicBounds(dr.mDrawableLeft, dr.mDrawableTop, drawable, dr.mDrawableBottom);
                 });
-                this._attrBinder.addAttr('drawableBottom', (value) => {
+                a.addAttr('drawableBottom', (value) => {
                     let dr = this.mDrawables || {};
-                    let drawable = this._attrBinder.parseDrawable(value);
+                    let drawable = a.parseDrawable(value);
                     this.setCompoundDrawablesWithIntrinsicBounds(dr.mDrawableLeft, dr.mDrawableTop, dr.mDrawableRight, drawable);
                 });
-                this._attrBinder.addAttr('drawableLeftUri', (value) => {
+                a.addAttr('drawableLeftUri', (value) => {
                     let dr = this.mDrawables || {};
                     let drawable = value ? new NetDrawable(value) : null;
                     this.setCompoundDrawablesWithIntrinsicBounds(drawable, dr.mDrawableTop, dr.mDrawableRight, dr.mDrawableBottom);
                 });
-                this._attrBinder.addAttr('drawableTopUri', (value) => {
+                a.addAttr('drawableTopUri', (value) => {
                     let dr = this.mDrawables || {};
                     let drawable = value ? new NetDrawable(value) : null;
                     this.setCompoundDrawablesWithIntrinsicBounds(dr.mDrawableLeft, drawable, dr.mDrawableRight, dr.mDrawableBottom);
                 });
-                this._attrBinder.addAttr('drawableRightUri', (value) => {
+                a.addAttr('drawableRightUri', (value) => {
                     let dr = this.mDrawables || {};
                     let drawable = value ? new NetDrawable(value) : null;
                     this.setCompoundDrawablesWithIntrinsicBounds(dr.mDrawableLeft, dr.mDrawableTop, drawable, dr.mDrawableBottom);
                 });
-                this._attrBinder.addAttr('drawableBottomUri', (value) => {
+                a.addAttr('drawableBottomUri', (value) => {
                     let dr = this.mDrawables || {};
                     let drawable = value ? new NetDrawable(value) : null;
                     this.setCompoundDrawablesWithIntrinsicBounds(dr.mDrawableLeft, dr.mDrawableTop, dr.mDrawableRight, drawable);
                 });
-                this._attrBinder.addAttr('drawablePadding', (value) => {
-                    this.setCompoundDrawablePadding(this._attrBinder.parseNumber(value));
+                a.addAttr('drawablePadding', (value) => {
+                    this.setCompoundDrawablePadding(a.parseNumber(value));
                 });
-                this._attrBinder.addAttr('maxLines', (value) => {
+                a.addAttr('maxLines', (value) => {
                     value = Number.parseInt(value);
                     if (Number.isInteger(value))
                         this.setMaxLines(value);
                 }, () => {
                     return this.getMaxLines();
                 });
-                this._attrBinder.addAttr('maxHeight', (value) => {
-                    this.setMaxHeight(this._attrBinder.parseNumber(value, this.getMaxHeight()));
+                a.addAttr('maxHeight', (value) => {
+                    this.setMaxHeight(a.parseNumber(value, this.getMaxHeight()));
                 }, () => {
                     return this.getMaxHeight();
                 });
-                this._attrBinder.addAttr('lines', (value) => {
+                a.addAttr('lines', (value) => {
                     value = Number.parseInt(value);
                     if (Number.isInteger(value))
                         this.setLines(value);
@@ -31985,8 +32420,8 @@ var android;
                         return this.getMaxLines();
                     return null;
                 });
-                this._attrBinder.addAttr('height', (value) => {
-                    value = this._attrBinder.parseNumber(value, -1);
+                a.addAttr('height', (value) => {
+                    value = a.parseNumber(value, -1);
                     if (value >= 0)
                         this.setHeight(value);
                 }, () => {
@@ -31994,28 +32429,28 @@ var android;
                         return this.getMaxHeight();
                     return null;
                 });
-                this._attrBinder.addAttr('minLines', (value) => {
-                    this.setMinLines(this._attrBinder.parseNumber(value, this.getMinLines()));
+                a.addAttr('minLines', (value) => {
+                    this.setMinLines(a.parseNumber(value, this.getMinLines()));
                 }, () => {
                     return this.getMinLines();
                 });
-                this._attrBinder.addAttr('minHeight', (value) => {
-                    this.setMinHeight(this._attrBinder.parseNumber(value, this.getMinHeight()));
+                a.addAttr('minHeight', (value) => {
+                    this.setMinHeight(a.parseNumber(value, this.getMinHeight()));
                 }, () => {
                     return this.getMinHeight();
                 });
-                this._attrBinder.addAttr('maxEms', (value) => {
-                    this.setMaxEms(this._attrBinder.parseNumber(value, this.getMaxEms()));
+                a.addAttr('maxEms', (value) => {
+                    this.setMaxEms(a.parseNumber(value, this.getMaxEms()));
                 }, () => {
                     return this.getMaxEms();
                 });
-                this._attrBinder.addAttr('maxWidth', (value) => {
-                    this.setMaxWidth(this._attrBinder.parseNumber(value, this.getMaxWidth()));
+                a.addAttr('maxWidth', (value) => {
+                    this.setMaxWidth(a.parseNumber(value, this.getMaxWidth()));
                 }, () => {
                     return this.getMaxWidth();
                 });
-                this._attrBinder.addAttr('ems', (value) => {
-                    let ems = this._attrBinder.parseNumber(value, null);
+                a.addAttr('ems', (value) => {
+                    let ems = a.parseNumber(value, null);
                     if (ems != null)
                         this.setEms(ems);
                 }, () => {
@@ -32023,8 +32458,8 @@ var android;
                         return this.getMaxEms();
                     return null;
                 });
-                this._attrBinder.addAttr('width', (value) => {
-                    value = this._attrBinder.parseNumber(value, -1);
+                a.addAttr('width', (value) => {
+                    value = a.parseNumber(value, -1);
                     if (value >= 0)
                         this.setWidth(value);
                 }, () => {
@@ -32032,60 +32467,60 @@ var android;
                         return this.getMinWidth();
                     return null;
                 });
-                this._attrBinder.addAttr('minEms', (value) => {
-                    this.setMinEms(this._attrBinder.parseNumber(value, this.getMinEms()));
+                a.addAttr('minEms', (value) => {
+                    this.setMinEms(a.parseNumber(value, this.getMinEms()));
                 }, () => {
                     return this.getMinEms();
                 });
-                this._attrBinder.addAttr('minWidth', (value) => {
-                    this.setMinWidth(this._attrBinder.parseNumber(value, this.getMinWidth()));
+                a.addAttr('minWidth', (value) => {
+                    this.setMinWidth(a.parseNumber(value, this.getMinWidth()));
                 }, () => {
                     return this.getMinWidth();
                 });
-                this._attrBinder.addAttr('gravity', (value) => {
-                    this.setGravity(this._attrBinder.parseGravity(value, this.mGravity));
+                a.addAttr('gravity', (value) => {
+                    this.setGravity(a.parseGravity(value, this.mGravity));
                 }, () => {
                     return this.mGravity;
                 });
-                this._attrBinder.addAttr('hint', (value) => {
-                    this.setHint(value);
+                a.addAttr('hint', (value) => {
+                    this.setHint(a.parseString(value));
                 }, () => {
                     return this.getHint();
                 });
-                this._attrBinder.addAttr('text', (value) => {
-                    this.setText(value);
+                a.addAttr('text', (value) => {
+                    this.setText(a.parseString(value));
                 }, () => {
                     return this.getText();
                 });
-                this._attrBinder.addAttr('scrollHorizontally', (value) => {
-                    this.setHorizontallyScrolling(this._attrBinder.parseBoolean(value, false));
+                a.addAttr('scrollHorizontally', (value) => {
+                    this.setHorizontallyScrolling(a.parseBoolean(value, false));
                 });
-                this._attrBinder.addAttr('singleLine', (value) => {
-                    this.setSingleLine(this._attrBinder.parseBoolean(value, false));
+                a.addAttr('singleLine', (value) => {
+                    this.setSingleLine(a.parseBoolean(value, false));
                 });
-                this._attrBinder.addAttr('ellipsize', (value) => {
+                a.addAttr('ellipsize', (value) => {
                     let ellipsize = TextUtils.TruncateAt[(value + '').toUpperCase()];
                     if (ellipsize)
                         this.setEllipsize(ellipsize);
                 });
-                this._attrBinder.addAttr('marqueeRepeatLimit', (value) => {
-                    let marqueeRepeatLimit = this._attrBinder.parseNumber(value, -1);
+                a.addAttr('marqueeRepeatLimit', (value) => {
+                    let marqueeRepeatLimit = a.parseNumber(value, -1);
                     if (marqueeRepeatLimit >= 0)
                         this.setMarqueeRepeatLimit(marqueeRepeatLimit);
                 });
-                this._attrBinder.addAttr('includeFontPadding', (value) => {
-                    this.setIncludeFontPadding(this._attrBinder.parseBoolean(value, false));
+                a.addAttr('includeFontPadding', (value) => {
+                    this.setIncludeFontPadding(a.parseBoolean(value, false));
                 });
-                this._attrBinder.addAttr('enabled', (value) => {
-                    this.setEnabled(this._attrBinder.parseBoolean(value, this.isEnabled()));
+                a.addAttr('enabled', (value) => {
+                    this.setEnabled(a.parseBoolean(value, this.isEnabled()));
                 });
-                this._attrBinder.addAttr('lineSpacingExtra', (value) => {
-                    this.setLineSpacing(this._attrBinder.parseNumber(value, this.mSpacingAdd), this.mSpacingMult);
+                a.addAttr('lineSpacingExtra', (value) => {
+                    this.setLineSpacing(a.parseNumber(value, this.mSpacingAdd), this.mSpacingMult);
                 }, () => {
                     return this.mSpacingAdd;
                 });
-                this._attrBinder.addAttr('lineSpacingMultiplier', (value) => {
-                    this.setLineSpacing(this.mSpacingAdd, this._attrBinder.parseNumber(value, this.mSpacingMult));
+                a.addAttr('lineSpacingMultiplier', (value) => {
+                    this.setLineSpacing(this.mSpacingAdd, a.parseNumber(value, this.mSpacingMult));
                 }, () => {
                     return this.mSpacingMult;
                 });
@@ -52878,7 +53313,6 @@ var android;
         var Log = android.util.Log;
         var Gravity = android.view.Gravity;
         var ViewGroup = android.view.ViewGroup;
-        var ForwardingListener = android.widget.ListPopupWindow.ForwardingListener;
         var AbsSpinner = android.widget.AbsSpinner;
         var ListAdapter = android.widget.ListAdapter;
         var ListPopupWindow = android.widget.ListPopupWindow;
@@ -52922,21 +53356,6 @@ var android;
                                 }
                             });
                             this.mPopup = popup;
-                            this.mForwardingListener = (() => {
-                                const _this = this;
-                                class _Inner extends ForwardingListener {
-                                    getPopup() {
-                                        return popup;
-                                    }
-                                    onForwardingStarted() {
-                                        if (!_this.mPopup.isShowing()) {
-                                            _this.mPopup.showPopup(_this.getTextDirection(), _this.getTextAlignment());
-                                        }
-                                        return true;
-                                    }
-                                }
-                                return new _Inner(this);
-                            })();
                             break;
                         }
                 }
@@ -53048,12 +53467,6 @@ var android;
             }
             setOnItemClickListenerInt(l) {
                 super.setOnItemClickListener(l);
-            }
-            onTouchEvent(event) {
-                if (this.mForwardingListener != null && this.mForwardingListener.onTouch(this, event)) {
-                    return true;
-                }
-                return super.onTouchEvent(event);
             }
             onMeasure(widthMeasureSpec, heightMeasureSpec) {
                 super.onMeasure(widthMeasureSpec, heightMeasureSpec);
@@ -53515,6 +53928,516 @@ var android;
         })(animation = view.animation || (view.animation = {}));
     })(view = android.view || (android.view = {}));
 })(android || (android = {}));
+/*
+ * Copyright (C) 2008 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+///<reference path="../../android/app/Activity.ts"/>
+///<reference path="../../android/content/Intent.ts"/>
+///<reference path="../../android/graphics/drawable/Drawable.ts"/>
+///<reference path="../../android/view/Menu.ts"/>
+///<reference path="../../android/view/View.ts"/>
+var android;
+(function (android) {
+    var view;
+    (function (view_7) {
+        class MenuItem {
+            constructor(menu, group, id, categoryOrder, ordering, title) {
+                this.mId = 0;
+                this.mGroup = 0;
+                this.mCategoryOrder = 0;
+                this.mOrdering = 0;
+                this.mVisible = true;
+                this.mEnable = true;
+                this.mMenu = menu;
+                this.mId = id;
+                this.mGroup = group;
+                this.mCategoryOrder = categoryOrder;
+                this.mOrdering = ordering;
+                this.mTitle = title;
+            }
+            getItemId() {
+                return this.mId;
+            }
+            getGroupId() {
+                return this.mGroup;
+            }
+            getOrder() {
+                return this.mOrdering;
+            }
+            setTitle(title) {
+                this.mTitle = title;
+                return this;
+            }
+            getTitle() {
+                return this.mTitle;
+            }
+            setIcon(icon) {
+                this.mIconDrawable = icon;
+                return this;
+            }
+            getIcon() {
+                return this.mIconDrawable;
+            }
+            setIntent(intent) {
+                this.mIntent = intent;
+                return this;
+            }
+            getIntent() {
+                return this.mIntent;
+            }
+            setVisible(visible) {
+                this.mVisible = visible;
+                return this;
+            }
+            isVisible() {
+                return this.mVisible;
+            }
+            setEnabled(enabled) {
+                this.mEnable = enabled;
+                return this;
+            }
+            isEnabled() {
+                return this.mEnable;
+            }
+            setOnMenuItemClickListener(menuItemClickListener) {
+                this.mClickListener = menuItemClickListener;
+                return this;
+            }
+            setActionView(view) {
+                this.mActionView = view;
+                return this;
+            }
+            getActionView() {
+                return this.mActionView;
+            }
+            invoke() {
+                if (this.mClickListener != null && this.mClickListener.onMenuItemClick(this)) {
+                    return true;
+                }
+                if (this.mMenu.dispatchMenuItemSelected(this.mMenu.getRootMenu(), this)) {
+                    return true;
+                }
+                if (this.mIntent != null) {
+                    try {
+                        this.mMenu.getContext().startActivity(this.mIntent);
+                        return true;
+                    }
+                    catch (e) {
+                        android.util.Log.e("MenuItem", "Can't find activity to handle intent; ignoring", e);
+                    }
+                }
+                return false;
+            }
+        }
+        view_7.MenuItem = MenuItem;
+    })(view = android.view || (android.view = {}));
+})(android || (android = {}));
+/*
+ * Copyright (C) 2006 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+///<reference path="../../android/app/Activity.ts"/>
+///<reference path="../../android/view/KeyEvent.ts"/>
+///<reference path="../../android/view/MenuItem.ts"/>
+var android;
+(function (android) {
+    var view;
+    (function (view) {
+        var MenuItem = android.view.MenuItem;
+        var ArrayList = java.util.ArrayList;
+        class Menu {
+            constructor(context) {
+                this.mItems = new ArrayList();
+                this.mVisibleItems = new ArrayList();
+                this.mContext = context;
+            }
+            getContext() {
+                return this.mContext;
+            }
+            add(...args) {
+                if (args.length == 1)
+                    return this.addInternal(0, 0, 0, args[0]);
+                return this.addInternal(args[0], args[1], args[2], args[3]);
+            }
+            addInternal(group, id, categoryOrder, title) {
+                const ordering = 0;
+                const item = new MenuItem(this, group, id, categoryOrder, ordering, title);
+                this.mItems.add(item);
+                return item;
+            }
+            removeItem(id) {
+                this.removeItemAtInt(this.findItemIndex(id), true);
+            }
+            removeGroup(groupId) {
+                const i = this.findGroupIndex(groupId);
+                if (i >= 0) {
+                    const maxRemovable = this.mItems.size() - i;
+                    let numRemoved = 0;
+                    while ((numRemoved++ < maxRemovable) && (this.mItems.get(i).getGroupId() == groupId)) {
+                        this.removeItemAtInt(i, false);
+                    }
+                    this.onItemsChanged(true);
+                }
+            }
+            removeItemAtInt(index, updateChildrenOnMenuViews) {
+                if ((index < 0) || (index >= this.mItems.size())) {
+                    return;
+                }
+                this.mItems.remove(index);
+                if (updateChildrenOnMenuViews) {
+                    this.onItemsChanged(true);
+                }
+            }
+            clear() {
+                this.mItems.clear();
+                this.onItemsChanged(true);
+            }
+            setGroupVisible(group, visible) {
+                const N = this.mItems.size();
+                let changedAtLeastOneItem = false;
+                for (let i = 0; i < N; i++) {
+                    let item = this.mItems.get(i);
+                    if (item.getGroupId() == group) {
+                        if (item.setVisible(visible)) {
+                            changedAtLeastOneItem = true;
+                        }
+                    }
+                }
+                if (changedAtLeastOneItem) {
+                    this.onItemsChanged(true);
+                }
+            }
+            setGroupEnabled(group, enabled) {
+                const N = this.mItems.size();
+                for (let i = 0; i < N; i++) {
+                    let item = this.mItems.get(i);
+                    if (item.getGroupId() == group) {
+                        item.setEnabled(enabled);
+                    }
+                }
+            }
+            hasVisibleItems() {
+                const size = this.size();
+                for (let i = 0; i < size; i++) {
+                    let item = this.mItems.get(i);
+                    if (item.isVisible()) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            findItem(id) {
+                const size = this.size();
+                for (let i = 0; i < size; i++) {
+                    let item = this.mItems.get(i);
+                    if (item.getItemId() == id) {
+                        return item;
+                    }
+                }
+                return null;
+            }
+            findItemIndex(id) {
+                const size = this.size();
+                for (let i = 0; i < size; i++) {
+                    let item = this.mItems.get(i);
+                    if (item.getItemId() == id) {
+                        return i;
+                    }
+                }
+                return -1;
+            }
+            findGroupIndex(group, start = 0) {
+                const size = this.size();
+                if (start < 0) {
+                    start = 0;
+                }
+                for (let i = start; i < size; i++) {
+                    const item = this.mItems.get(i);
+                    if (item.getGroupId() == group) {
+                        return i;
+                    }
+                }
+                return -1;
+            }
+            size() {
+                return this.mItems.size();
+            }
+            getItem(index) {
+                return this.mItems.get(index);
+            }
+            onItemsChanged(structureChanged) {
+            }
+            getRootMenu() {
+                return this;
+            }
+            setCallback(cb) {
+                this.mCallback = cb;
+            }
+            dispatchMenuItemSelected(menu, item) {
+                return this.mCallback != null && this.mCallback.onMenuItemSelected(menu, item);
+            }
+            getVisibleItems() {
+                this.mVisibleItems.clear();
+                const itemsSize = this.mItems.size();
+                let item;
+                for (let i = 0; i < itemsSize; i++) {
+                    item = this.mItems.get(i);
+                    if (item.isVisible()) {
+                        this.mVisibleItems.add(item);
+                    }
+                }
+                return this.mVisibleItems;
+            }
+        }
+        view.Menu = Menu;
+        (function (Menu) {
+            Menu.USER_MASK = 0x0000ffff;
+            Menu.USER_SHIFT = 0;
+            Menu.CATEGORY_MASK = 0xffff0000;
+            Menu.CATEGORY_SHIFT = 16;
+            Menu.NONE = 0;
+            Menu.FIRST = 1;
+            Menu.CATEGORY_CONTAINER = 0x00010000;
+            Menu.CATEGORY_SYSTEM = 0x00020000;
+            Menu.CATEGORY_SECONDARY = 0x00030000;
+            Menu.CATEGORY_ALTERNATIVE = 0x00040000;
+            Menu.FLAG_APPEND_TO_GROUP = 0x0001;
+            Menu.FLAG_PERFORM_NO_CLOSE = 0x0001;
+            Menu.FLAG_ALWAYS_PERFORM_CLOSE = 0x0002;
+        })(Menu = view.Menu || (view.Menu = {}));
+    })(view = android.view || (android.view = {}));
+})(android || (android = {}));
+/*
+ * Copyright (C) 2010 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+///<reference path="../../../android/content/res/Resources.ts"/>
+///<reference path="../../../android/R/layout.ts"/>
+///<reference path="../../../android/R/attr.ts"/>
+///<reference path="../../../android/widget/ListPopupWindow.ts"/>
+///<reference path="../../../android/view/KeyEvent.ts"/>
+///<reference path="../../../android/view/LayoutInflater.ts"/>
+///<reference path="../../../android/view/Menu.ts"/>
+///<reference path="../../../android/view/MenuItem.ts"/>
+///<reference path="../../../android/view/View.ts"/>
+///<reference path="../../../android/view/ViewGroup.ts"/>
+///<reference path="../../../android/view/ViewTreeObserver.ts"/>
+///<reference path="../../../android/widget/AdapterView.ts"/>
+///<reference path="../../../android/widget/TextView.ts"/>
+///<reference path="../../../android/widget/ImageView.ts"/>
+///<reference path="../../../android/widget/BaseAdapter.ts"/>
+///<reference path="../../../android/widget/FrameLayout.ts"/>
+///<reference path="../../../android/widget/ListAdapter.ts"/>
+///<reference path="../../../android/widget/PopupWindow.ts"/>
+///<reference path="../../../java/util/ArrayList.ts"/>
+var android;
+(function (android) {
+    var view;
+    (function (view_8) {
+        var menu;
+        (function (menu_1) {
+            var R = android.R;
+            var ListPopupWindow = android.widget.ListPopupWindow;
+            var KeyEvent = android.view.KeyEvent;
+            var LayoutInflater = android.view.LayoutInflater;
+            var View = android.view.View;
+            var MeasureSpec = android.view.View.MeasureSpec;
+            var BaseAdapter = android.widget.BaseAdapter;
+            var FrameLayout = android.widget.FrameLayout;
+            var PopupWindow = android.widget.PopupWindow;
+            class MenuPopupHelper {
+                constructor(context, menu, anchorView = null) {
+                    this.mPopupMaxWidth = 0;
+                    this.mContext = context;
+                    this.mInflater = LayoutInflater.from(context);
+                    this.mMenu = menu;
+                    const res = context.getResources();
+                    this.mPopupMaxWidth = Math.max(res.getDisplayMetrics().widthPixels / 2, res.getDisplayMetrics().density * 320);
+                    this.mAnchorView = anchorView;
+                }
+                setAnchorView(anchor) {
+                    this.mAnchorView = anchor;
+                }
+                show() {
+                    if (!this.tryShow()) {
+                        throw Error(`new IllegalStateException("MenuPopupHelper cannot be used without an anchor")`);
+                    }
+                }
+                tryShow() {
+                    this.mPopup = new ListPopupWindow(this.mContext, R.attr.popupMenuStyle);
+                    this.mPopup.setOnDismissListener(this);
+                    this.mPopup.setOnItemClickListener(this);
+                    this.mAdapter = new MenuPopupHelper.MenuAdapter(this.mMenu, this);
+                    this.mPopup.setAdapter(this.mAdapter);
+                    this.mPopup.setModal(true);
+                    let anchor = this.mAnchorView;
+                    if (anchor != null) {
+                        const addGlobalListener = this.mTreeObserver == null;
+                        this.mTreeObserver = anchor.getViewTreeObserver();
+                        if (addGlobalListener) {
+                            this.mTreeObserver.addOnGlobalLayoutListener(this);
+                        }
+                        this.mPopup.setAnchorView(anchor);
+                    }
+                    else {
+                        return false;
+                    }
+                    this.mPopup.setContentWidth(Math.min(this.measureContentWidth(this.mAdapter), this.mPopupMaxWidth));
+                    this.mPopup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED);
+                    this.mPopup.show();
+                    this.mPopup.getListView().setOnKeyListener(this);
+                    return true;
+                }
+                dismiss() {
+                    if (this.isShowing()) {
+                        this.mPopup.dismiss();
+                    }
+                }
+                onDismiss() {
+                    this.mPopup = null;
+                    if (this.mTreeObserver != null) {
+                        if (!this.mTreeObserver.isAlive()) {
+                            this.mTreeObserver = this.mAnchorView.getViewTreeObserver();
+                        }
+                        this.mTreeObserver.removeGlobalOnLayoutListener(this);
+                        this.mTreeObserver = null;
+                    }
+                }
+                isShowing() {
+                    return this.mPopup != null && this.mPopup.isShowing();
+                }
+                onItemClick(parent, view, position, id) {
+                    let adapter = this.mAdapter;
+                    let invoked = adapter.getItem(position).invoke();
+                    if (invoked)
+                        this.mPopup.dismiss();
+                }
+                onKey(v, keyCode, event) {
+                    if (event.getAction() == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_MENU) {
+                        this.dismiss();
+                        return true;
+                    }
+                    return false;
+                }
+                measureContentWidth(adapter) {
+                    let width = 0;
+                    let itemView = null;
+                    let itemType = 0;
+                    const widthMeasureSpec = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
+                    const heightMeasureSpec = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
+                    const count = adapter.getCount();
+                    for (let i = 0; i < count; i++) {
+                        const positionType = adapter.getItemViewType(i);
+                        if (positionType != itemType) {
+                            itemType = positionType;
+                            itemView = null;
+                        }
+                        if (this.mMeasureParent == null) {
+                            this.mMeasureParent = new FrameLayout(this.mContext);
+                        }
+                        itemView = adapter.getView(i, itemView, this.mMeasureParent);
+                        itemView.measure(widthMeasureSpec, heightMeasureSpec);
+                        width = Math.max(width, itemView.getMeasuredWidth());
+                    }
+                    return width;
+                }
+                onGlobalLayout() {
+                    if (this.isShowing()) {
+                        const anchor = this.mAnchorView;
+                        if (anchor == null || !anchor.isShown()) {
+                            this.dismiss();
+                        }
+                        else if (this.isShowing()) {
+                            this.mPopup.show();
+                        }
+                    }
+                }
+            }
+            MenuPopupHelper.TAG = "MenuPopupHelper";
+            MenuPopupHelper.ITEM_LAYOUT = R.layout.popup_menu_item_layout;
+            menu_1.MenuPopupHelper = MenuPopupHelper;
+            (function (MenuPopupHelper) {
+                class MenuAdapter extends BaseAdapter {
+                    constructor(menu, arg) {
+                        super();
+                        this._MenuPopupHelper_this = arg;
+                        this.mAdapterMenu = menu;
+                    }
+                    getCount() {
+                        let items = this.mAdapterMenu.getVisibleItems();
+                        return items.size();
+                    }
+                    getItem(position) {
+                        let items = this.mAdapterMenu.getVisibleItems();
+                        return items.get(position);
+                    }
+                    getItemId(position) {
+                        return position;
+                    }
+                    getView(position, convertView, parent) {
+                        if (convertView == null) {
+                            convertView = this._MenuPopupHelper_this.mInflater.inflate(MenuPopupHelper.ITEM_LAYOUT, parent, false);
+                        }
+                        let itemData = this.getItem(position);
+                        convertView.setVisibility(itemData.isVisible() ? View.VISIBLE : View.GONE);
+                        let titleView = convertView.findViewById('title');
+                        titleView.setText(itemData.getTitle());
+                        let iconView = convertView.findViewById('icon');
+                        let icon = itemData.getIcon();
+                        iconView.setImageDrawable(icon);
+                        if (icon != null) {
+                            iconView.setImageDrawable(icon);
+                            iconView.setVisibility(View.VISIBLE);
+                        }
+                        else {
+                            iconView.setVisibility(View.GONE);
+                        }
+                        convertView.setEnabled(itemData.isEnabled());
+                        return convertView;
+                    }
+                    notifyDataSetChanged() {
+                        super.notifyDataSetChanged();
+                    }
+                }
+                MenuPopupHelper.MenuAdapter = MenuAdapter;
+            })(MenuPopupHelper = menu_1.MenuPopupHelper || (menu_1.MenuPopupHelper = {}));
+        })(menu = view_8.menu || (view_8.menu = {}));
+    })(view = android.view || (android.view = {}));
+})(android || (android = {}));
 /**
  * Created by linfaxin on 15/11/5.
  */
@@ -53529,7 +54452,7 @@ var android;
         var v4;
         (function (v4) {
             var view;
-            (function (view_7) {
+            (function (view_9) {
                 var DataSetObservable = android.database.DataSetObservable;
                 class PagerAdapter {
                     constructor() {
@@ -53568,7 +54491,7 @@ var android;
                 }
                 PagerAdapter.POSITION_UNCHANGED = -1;
                 PagerAdapter.POSITION_NONE = -2;
-                view_7.PagerAdapter = PagerAdapter;
+                view_9.PagerAdapter = PagerAdapter;
             })(view = v4.view || (v4.view = {}));
         })(v4 = support.v4 || (support.v4 = {}));
     })(support = android.support || (android.support = {}));
@@ -53594,7 +54517,7 @@ var android;
         var v4;
         (function (v4) {
             var view;
-            (function (view_8) {
+            (function (view_10) {
                 var View = android.view.View;
                 var Gravity = android.view.Gravity;
                 var MeasureSpec = View.MeasureSpec;
@@ -55431,7 +56354,7 @@ var android;
                 ViewPager.SCROLL_STATE_IDLE = 0;
                 ViewPager.SCROLL_STATE_DRAGGING = 1;
                 ViewPager.SCROLL_STATE_SETTLING = 2;
-                view_8.ViewPager = ViewPager;
+                view_10.ViewPager = ViewPager;
                 (function (ViewPager) {
                     class SimpleOnPageChangeListener {
                         onPageScrolled(position, positionOffset, positionOffsetPixels) {
@@ -55459,7 +56382,7 @@ var android;
                         }
                     }
                     ViewPager.LayoutParams = LayoutParams;
-                })(ViewPager = view_8.ViewPager || (view_8.ViewPager = {}));
+                })(ViewPager = view_10.ViewPager || (view_10.ViewPager = {}));
                 class ItemInfo {
                     constructor() {
                         this.position = 0;
@@ -58620,6 +59543,174 @@ var uk;
         })(senab = co.senab || (co.senab = {}));
     })(co = uk.co || (uk.co = {}));
 })(uk || (uk = {}));
+/*
+ * Copyright (C) 2010 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+///<reference path="../../android/graphics/drawable/Drawable.ts"/>
+///<reference path="../../android/view/Gravity.ts"/>
+///<reference path="../../android/view/View.ts"/>
+///<reference path="../../android/view/ViewGroup.ts"/>
+///<reference path="../../android/view/Window.ts"/>
+///<reference path="../../android/widget/SpinnerAdapter.ts"/>
+///<reference path="../../android/widget/FrameLayout.ts"/>
+///<reference path="../../android/widget/TextView.ts"/>
+///<reference path="../../android/app/Activity.ts"/>
+///<reference path="../../android/app/Application.ts"/>
+///<reference path="../../android/R/attr.ts"/>
+///<reference path="../../android/R/layout.ts"/>
+var android;
+(function (android) {
+    var app;
+    (function (app) {
+        var View = android.view.View;
+        var FrameLayout = android.widget.FrameLayout;
+        class ActionBar extends FrameLayout {
+            constructor(context, bindElement, defStyle = android.R.attr.actionBarStyle) {
+                super(context, bindElement, defStyle);
+                context.getLayoutInflater().inflate(android.R.layout.action_bar, this);
+                this.mCenterLayout = this.findViewById('action_bar_center_layout');
+                this.mTitleView = this.findViewById('action_bar_title');
+                this.mSubTitleView = this.findViewById('action_bar_sub_title');
+                this.mActionLeft = this.findViewById('action_bar_left');
+                this.mActionRight = this.findViewById('action_bar_right');
+            }
+            setCustomView(view, layoutParams) {
+                this.mCenterLayout.removeAllViews();
+                this.mCustomView = view;
+                if (layoutParams)
+                    this.mCenterLayout.addView(view, layoutParams);
+                else
+                    this.mCenterLayout.addView(view);
+            }
+            setIcon(icon) {
+                icon.setBounds(0, 0, icon.getIntrinsicWidth(), icon.getIntrinsicHeight());
+                let drawables = this.mTitleView.getCompoundDrawables();
+                this.mTitleView.setCompoundDrawables(icon, drawables[1], drawables[2], drawables[3]);
+            }
+            setLogo(logo) {
+                this.setIcon(logo);
+            }
+            setTitle(title) {
+                this.mTitleView.setText(title);
+            }
+            setSubtitle(subtitle) {
+                this.mSubTitleView.setText(subtitle);
+                let empty = subtitle == null || subtitle.length == 0;
+                this.mSubTitleView.setVisibility(empty ? View.GONE : View.VISIBLE);
+            }
+            getCustomView() {
+                return this.mCustomView;
+            }
+            getTitle() {
+                return this.mTitleView.getText().toString();
+            }
+            getSubtitle() {
+                return this.mSubTitleView.getText().toString();
+            }
+            show() {
+                this.setVisibility(View.VISIBLE);
+            }
+            hide() {
+                this.setVisibility(View.GONE);
+            }
+            isShowing() {
+                return this.isShown();
+            }
+            setActionLeft(name, icon, listener) {
+                this.mActionLeft.setText(name);
+                this.mActionLeft.setVisibility(View.VISIBLE);
+                let drawables = this.mActionLeft.getCompoundDrawables();
+                icon.setBounds(0, 0, icon.getIntrinsicWidth(), icon.getIntrinsicHeight());
+                this.mActionLeft.setCompoundDrawables(icon, drawables[1], drawables[2], drawables[3]);
+                this.mActionLeft.setOnClickListener(listener);
+            }
+            hideActionLeft() {
+                this.mActionLeft.setVisibility(View.GONE);
+            }
+            setActionRight(name, icon, listener) {
+                this.mActionRight.setText(name);
+                this.mActionRight.setVisibility(View.VISIBLE);
+                let drawables = this.mActionRight.getCompoundDrawables();
+                icon.setBounds(0, 0, icon.getIntrinsicWidth(), icon.getIntrinsicHeight());
+                this.mActionRight.setCompoundDrawables(drawables[0], drawables[1], icon, drawables[3]);
+                this.mActionRight.setOnClickListener(listener);
+            }
+            hideActionRight() {
+                this.mActionRight.setVisibility(View.GONE);
+            }
+        }
+        app.ActionBar = ActionBar;
+    })(app = android.app || (android.app = {}));
+})(android || (android = {}));
+/**
+ * Created by linfaxin on 16/1/21.
+ */
+///<reference path="Activity.ts"/>
+///<reference path="ActionBar.ts"/>
+var android;
+(function (android) {
+    var app;
+    (function (app) {
+        class ActionBarActivity extends app.Activity {
+            onCreate(savedInstanceState) {
+                super.onCreate(savedInstanceState);
+                this.initActionBar();
+            }
+            initActionBar() {
+                this.setActionBar(new app.ActionBar(this));
+                this.initDefaultBackFinish();
+            }
+            initDefaultBackFinish() {
+                if (this.androidUI.mActivityThread.mLaunchedActivities.size === 0)
+                    return;
+                const activity = this;
+                this.mActionBar.setActionLeft(android.R.string_.back, android.R.image.actionbar_ic_back_white, {
+                    onClick(view) {
+                        activity.finish();
+                    }
+                });
+            }
+            setActionBar(actionBar) {
+                const activity = this;
+                let w = this.getWindow();
+                let decorView = w.mDecor;
+                this.mActionBar = actionBar;
+                decorView.addView(actionBar, -1, -2);
+                const onMeasure = decorView.onMeasure;
+                decorView.onMeasure = (widthMeasureSpec, heightMeasureSpec) => {
+                    onMeasure.call(decorView, widthMeasureSpec, heightMeasureSpec);
+                    if (activity.mActionBar === actionBar) {
+                        let params = w.mContentParent.getLayoutParams();
+                        if (params.topMargin != actionBar.getMeasuredHeight()) {
+                            params.topMargin = actionBar.getMeasuredHeight();
+                            onMeasure.call(decorView, widthMeasureSpec, heightMeasureSpec);
+                        }
+                    }
+                };
+            }
+            getActionBar() {
+                return this.mActionBar;
+            }
+            onTitleChanged(title, color) {
+                super.onTitleChanged(title, color);
+                this.mActionBar.setTitle(title);
+            }
+        }
+        app.ActionBarActivity = ActionBarActivity;
+    })(app = android.app || (android.app = {}));
+})(android || (android = {}));
 /**
  * Created by linfaxin on 15/10/26.
  */
@@ -58643,6 +59734,11 @@ var androidui;
             }
             requestSyncBoundToElement(immediately = true) {
                 super.requestSyncBoundToElement(immediately);
+            }
+            setLayerType(layerType) {
+                if (layerType != View.LAYER_TYPE_NONE)
+                    return;
+                super.setLayerType(layerType);
             }
             onAttachedToWindow() {
                 this.getContext().androidUI.showDebugLayout();
@@ -60179,6 +61275,7 @@ var androidui;
  * Created by linfaxin on 15/12/14.
  */
 ///<reference path="../image/NetImage"/>
+///<reference path="../../android/graphics/Rect.ts"/>
 ///<reference path="NativeApi.ts"/>
 var androidui;
 (function (androidui) {
@@ -60199,6 +61296,8 @@ var androidui;
             recycle() {
                 native.NativeApi.image.recycleImage(this.imageId);
                 NativeImageInstances.delete(this.imageId);
+            }
+            getPixels(bound, callBack) {
             }
             static notifyLoadFinish(imageId, width, height) {
                 let image = NativeImageInstances.get(imageId);
@@ -60396,12 +61495,15 @@ var androidui;
 ///<reference path="android/view/animation/RotateAnimation.ts"/>
 ///<reference path="android/view/animation/TranslateAnimation.ts"/>
 ///<reference path="android/view/animation/AnimationSet.ts"/>
+///<reference path="android/view/Menu.ts"/>
+///<reference path="android/view/menu/MenuPopupHelper.ts"/>
 ///<reference path="android/support/v4/view/ViewPager.ts"/>
 ///<reference path="android/support/v4/widget/ViewDragHelper.ts"/>
 ///<reference path="android/support/v4/widget/DrawerLayout.ts"/>
 ///<reference path="lib/com/jakewharton/salvage/RecyclingPagerAdapter.ts"/>
 ///<reference path="lib/uk/co/senab/photoview/PhotoView.ts"/>
 ///<reference path="android/app/Activity.ts"/>
+///<reference path="android/app/ActionBarActivity.ts"/>
 ///<reference path="androidui/AndroidUI.ts"/>
 ///<reference path="androidui/image/NetDrawable.ts"/>
 ///<reference path="androidui/widget/HtmlView.ts"/>

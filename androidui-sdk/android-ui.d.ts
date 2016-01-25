@@ -531,13 +531,15 @@ declare module android.graphics {
     }
 }
 declare module androidui.image {
+    import Rect = android.graphics.Rect;
     class NetImage {
-        private platformImage;
+        private browserImage;
         private mSrc;
         private mImageWidth;
         private mImageHeight;
         private mOnLoads;
         private mOnErrors;
+        private mImageLoaded;
         private mOverrideImageRatio;
         constructor(src: string, overrideImageRatio?: number);
         protected init(src: string): void;
@@ -547,11 +549,13 @@ declare module androidui.image {
         width: number;
         height: number;
         getImageRatio(): number;
+        isImageLoaded(): boolean;
         private fireOnLoad();
         private fireOnError();
         addLoadListener(onload: () => void, onerror?: () => void): void;
         removeLoadListener(onload?: () => void, onerror?: () => void): void;
         recycle(): void;
+        getPixels(bound: Rect, callBack: (data: number[]) => void): void;
     }
 }
 declare module android.graphics {
@@ -607,7 +611,7 @@ declare module android.graphics {
         getClipBounds(bounds?: Rect): Rect;
         quickReject(rect: Rect): boolean;
         quickReject(left: number, top: number, right: number, bottom: number): boolean;
-        drawCanvas(canvas: Canvas, offsetX: number, offsetY: number): void;
+        drawCanvas(canvas: Canvas, offsetX?: number, offsetY?: number): void;
         protected drawCanvasImpl(canvas: Canvas, offsetX: number, offsetY: number): void;
         drawImage(image: NetImage, srcRect?: Rect, dstRect?: Rect, paint?: Paint): void;
         protected drawImageImpl(image: NetImage, srcRect?: Rect, dstRect?: Rect): void;
@@ -1019,8 +1023,10 @@ declare module android.content {
 declare module android.R {
     class layout {
         static getLayoutData(layoutRef: string): HTMLElement;
+        static action_bar: string;
         static alert_dialog: string;
         static alert_dialog_progress: string;
+        static popup_menu_item_layout: string;
         static select_dialog: string;
         static select_dialog_item: string;
         static select_dialog_multichoice: string;
@@ -1413,7 +1419,7 @@ declare module androidui.attr {
         addAttr(attrName: string, onAttrChange: (newValue: any) => void, stashAttrValueWhenStateChange?: () => any): void;
         onAttrChange(attrName: string, attrValue: any, context: Context): void;
         getAttrValue(attrName: string): any;
-        private getRefObject(ref, recycel?);
+        private getRefObject(ref);
         private setRefObject(obj);
         parsePaddingMarginLTRB(value: any): string[];
         parseBoolean(value: any, defaultValue?: boolean): boolean;
@@ -1444,6 +1450,7 @@ declare module androidui.image {
         private mTileModeY;
         private mTmpTileBound;
         constructor(src: string | NetImage, paint?: Paint, overrideImageRatio?: number);
+        protected initBoundWithLoadedImage(image: NetImage): void;
         draw(canvas: Canvas): void;
         private drawTile(canvas);
         setAlpha(alpha: number): void;
@@ -1485,6 +1492,7 @@ declare module android.view {
         static KEYCODE_MOVE_HOME: number;
         static KEYCODE_MOVE_END: number;
         static KEYCODE_BACK: number;
+        static KEYCODE_MENU: number;
         static ACTION_DOWN: number;
         static ACTION_UP: number;
         static META_ALT_ON: number;
@@ -1919,7 +1927,7 @@ declare module android.R {
     import InsetDrawable = android.graphics.drawable.InsetDrawable;
     import StateListDrawable = android.graphics.drawable.StateListDrawable;
     class drawable {
-        static button_background: Drawable;
+        static btn_default: Drawable;
         static btn_check: Drawable;
         static btn_radio: Drawable;
         static progress_small_holo: Drawable;
@@ -1943,8 +1951,23 @@ declare module android.R {
         static divider_horizontal: Drawable;
         static item_background: StateListDrawable;
         static toast_frame: InsetDrawable;
-        static dropdown_background_dark: InsetDrawable;
-        static menu_panel_holo_light: InsetDrawable;
+    }
+}
+declare module androidui.image {
+    import Canvas = android.graphics.Canvas;
+    class NinePatchDrawable extends NetDrawable {
+        private static GlobalBorderInfoCache;
+        private static DrawNinePatchWithCache;
+        private mTmpRect;
+        private mTmpRect2;
+        private mNinePatchBorderInfo;
+        private mNinePatchDrawCache;
+        protected initBoundWithLoadedImage(image: NetImage): void;
+        protected onLoad(): void;
+        draw(canvas: Canvas): void;
+        private getNinePatchCache();
+        private drawNinePatch(canvas);
+        getPadding(padding: android.graphics.Rect): boolean;
     }
 }
 declare module androidui.image {
@@ -1977,6 +2000,7 @@ declare module androidui.image {
 }
 declare module android.R {
     class image_base64 {
+        static actionbar_ic_back_white: any;
         static btn_check_off_disabled_focused_holo_light: any;
         static btn_check_off_disabled_holo_light: any;
         static btn_check_off_focused_holo_light: any;
@@ -1987,6 +2011,11 @@ declare module android.R {
         static btn_check_on_focused_holo_light: any;
         static btn_check_on_holo_light: any;
         static btn_check_on_pressed_holo_light: any;
+        static btn_default_disabled_focused_holo_light: any;
+        static btn_default_disabled_holo_light: any;
+        static btn_default_focused_holo_light: any;
+        static btn_default_normal_holo_light: any;
+        static btn_default_pressed_holo_light: any;
         static btn_radio_off_disabled_focused_holo_light: any;
         static btn_radio_off_disabled_holo_light: any;
         static btn_radio_off_focused_holo_light: any;
@@ -2001,6 +2030,10 @@ declare module android.R {
         static btn_rating_star_off_pressed_holo_light: any;
         static btn_rating_star_on_normal_holo_light: any;
         static btn_rating_star_on_pressed_holo_light: any;
+        static dropdown_background_dark: any;
+        static ic_menu_moreoverflow_normal_holo_dark: any;
+        static menu_panel_holo_dark: any;
+        static menu_panel_holo_light: any;
         static progressbar_indeterminate_holo1: any;
         static progressbar_indeterminate_holo2: any;
         static progressbar_indeterminate_holo3: any;
@@ -2022,8 +2055,10 @@ declare module android.R {
 }
 declare module android.R {
     import NetDrawable = androidui.image.NetDrawable;
-    import OverrideSizeDrawable = androidui.image.ChangeImageSizeDrawable;
+    import ChangeImageSizeDrawable = androidui.image.ChangeImageSizeDrawable;
+    import NinePatchDrawable = androidui.image.NinePatchDrawable;
     class image {
+        static actionbar_ic_back_white: NetDrawable;
         static btn_check_off_disabled_focused_holo_light: NetDrawable;
         static btn_check_off_disabled_holo_light: NetDrawable;
         static btn_check_off_focused_holo_light: NetDrawable;
@@ -2034,6 +2069,11 @@ declare module android.R {
         static btn_check_on_focused_holo_light: NetDrawable;
         static btn_check_on_holo_light: NetDrawable;
         static btn_check_on_pressed_holo_light: NetDrawable;
+        static btn_default_disabled_focused_holo_light: NinePatchDrawable;
+        static btn_default_disabled_holo_light: NinePatchDrawable;
+        static btn_default_focused_holo_light: NinePatchDrawable;
+        static btn_default_normal_holo_light: NinePatchDrawable;
+        static btn_default_pressed_holo_light: NinePatchDrawable;
         static btn_radio_off_disabled_focused_holo_light: NetDrawable;
         static btn_radio_off_disabled_holo_light: NetDrawable;
         static btn_radio_off_focused_holo_light: NetDrawable;
@@ -2044,10 +2084,14 @@ declare module android.R {
         static btn_radio_on_focused_holo_light: NetDrawable;
         static btn_radio_on_holo_light: NetDrawable;
         static btn_radio_on_pressed_holo_light: NetDrawable;
-        static btn_rating_star_off_pressed_holo_light: NetDrawable;
         static btn_rating_star_off_normal_holo_light: NetDrawable;
-        static btn_rating_star_on_pressed_holo_light: NetDrawable;
+        static btn_rating_star_off_pressed_holo_light: NetDrawable;
         static btn_rating_star_on_normal_holo_light: NetDrawable;
+        static btn_rating_star_on_pressed_holo_light: NetDrawable;
+        static dropdown_background_dark: NinePatchDrawable;
+        static ic_menu_moreoverflow_normal_holo_dark: NetDrawable;
+        static menu_panel_holo_dark: NinePatchDrawable;
+        static menu_panel_holo_light: NinePatchDrawable;
         static progressbar_indeterminate_holo1: NetDrawable;
         static progressbar_indeterminate_holo2: NetDrawable;
         static progressbar_indeterminate_holo3: NetDrawable;
@@ -2065,13 +2109,13 @@ declare module android.R {
         static scrubber_control_pressed_holo: NetDrawable;
         static spinner_76_inner_holo: NetDrawable;
         static spinner_76_outer_holo: NetDrawable;
-        static spinner_48_outer_holo: OverrideSizeDrawable;
-        static spinner_48_inner_holo: OverrideSizeDrawable;
-        static spinner_16_outer_holo: OverrideSizeDrawable;
-        static spinner_16_inner_holo: OverrideSizeDrawable;
-        static rate_star_small_off_holo_light: OverrideSizeDrawable;
-        static rate_star_small_half_holo_light: OverrideSizeDrawable;
-        static rate_star_small_on_holo_light: OverrideSizeDrawable;
+        static spinner_48_outer_holo: ChangeImageSizeDrawable;
+        static spinner_48_inner_holo: ChangeImageSizeDrawable;
+        static spinner_16_outer_holo: ChangeImageSizeDrawable;
+        static spinner_16_inner_holo: ChangeImageSizeDrawable;
+        static rate_star_small_off_holo_light: ChangeImageSizeDrawable;
+        static rate_star_small_half_holo_light: ChangeImageSizeDrawable;
+        static rate_star_small_on_holo_light: ChangeImageSizeDrawable;
     }
 }
 declare module android.R {
@@ -2079,6 +2123,9 @@ declare module android.R {
     class color {
         static textView_textColor: ColorStateList;
         static primary_text_light_disable_only: ColorStateList;
+        static primary_text_dark_disable_only: ColorStateList;
+        static white: number;
+        static black: number;
     }
 }
 declare module goog.math {
@@ -2293,7 +2340,6 @@ declare module android.view.animation {
 }
 declare module android.R {
     import Drawable = android.graphics.drawable.Drawable;
-    import InsetDrawable = android.graphics.drawable.InsetDrawable;
     import ColorDrawable = android.graphics.drawable.ColorDrawable;
     import StateListDrawable = android.graphics.drawable.StateListDrawable;
     class attr {
@@ -2385,14 +2431,17 @@ declare module android.R {
             virtualButtonPressedDrawable: StateListDrawable;
         };
         static popupWindowStyle: {
-            popupBackground: InsetDrawable;
+            popupBackground: androidui.image.NinePatchDrawable;
             popupEnterAnimation: view.animation.Animation;
             popupExitAnimation: view.animation.Animation;
         };
         static listPopupWindowStyle: {
-            popupBackground: InsetDrawable;
+            popupBackground: androidui.image.NinePatchDrawable;
             popupEnterAnimation: view.animation.Animation;
             popupExitAnimation: view.animation.Animation;
+        };
+        static popupMenuStyle: {
+            popupBackground: androidui.image.NinePatchDrawable;
         };
         static dropDownListViewStyle: {
             divider: Drawable;
@@ -2405,10 +2454,13 @@ declare module android.R {
             gravity: number;
             disableChildrenWhenDisabled: boolean;
             background: Drawable;
-            popupBackground: InsetDrawable;
+            popupBackground: androidui.image.NinePatchDrawable;
             dropDownVerticalOffset: string;
             dropDownHorizontalOffset: string;
             dropDownWidth: number;
+        };
+        static actionBarStyle: {
+            background: ColorDrawable;
         };
     }
     module attr {
@@ -3299,6 +3351,7 @@ declare module android.R {
         static ok: string;
         static cancel: string;
         static close: string;
+        static back: string;
         static crash_catch_alert: string;
         static prll_header_state_normal: string;
         static prll_header_state_ready: string;
@@ -3314,7 +3367,6 @@ declare module android.R {
 }
 declare module androidui {
     class AndroidUI {
-        static DomClassName: string;
         static BindToElementName: string;
         androidUIElement: AndroidUIElement;
         private _canvas;
@@ -3322,6 +3374,7 @@ declare module androidui {
         private mActivityThread;
         private _viewRootImpl;
         private mApplication;
+        appName: string;
         private rootResourceElement;
         private _windowBound;
         private tempRect;
@@ -9191,7 +9244,6 @@ declare module android.widget {
     import OnClickListener = android.content.DialogInterface.OnClickListener;
     import DataSetObserver = android.database.DataSetObserver;
     import Drawable = android.graphics.drawable.Drawable;
-    import MotionEvent = android.view.MotionEvent;
     import View = android.view.View;
     import ViewGroup = android.view.ViewGroup;
     import AbsSpinner = android.widget.AbsSpinner;
@@ -9207,7 +9259,6 @@ declare module android.widget {
         static MODE_DIALOG: number;
         static MODE_DROPDOWN: number;
         private static MODE_THEME;
-        private mForwardingListener;
         private mPopup;
         private mTempAdapter;
         mDropDownWidth: number;
@@ -9220,7 +9271,7 @@ declare module android.widget {
             gravity: number;
             disableChildrenWhenDisabled: boolean;
             background: Drawable;
-            popupBackground: graphics.drawable.InsetDrawable;
+            popupBackground: androidui.image.NinePatchDrawable;
             dropDownVerticalOffset: string;
             dropDownHorizontalOffset: string;
             dropDownWidth: number;
@@ -9241,7 +9292,6 @@ declare module android.widget {
         protected onDetachedFromWindow(): void;
         setOnItemClickListener(l: AdapterView.OnItemClickListener): void;
         setOnItemClickListenerInt(l: AdapterView.OnItemClickListener): void;
-        onTouchEvent(event: MotionEvent): boolean;
         protected onMeasure(widthMeasureSpec: number, heightMeasureSpec: number): void;
         protected onLayout(changed: boolean, l: number, t: number, r: number, b: number): void;
         layoutSpinner(delta: number, animate: boolean): void;
@@ -9334,6 +9384,148 @@ declare module android.view.animation {
         private initializePivotPoint();
         protected applyTransformation(interpolatedTime: number, t: Transformation): void;
         initialize(width: number, height: number, parentWidth: number, parentHeight: number): void;
+    }
+}
+declare module android.view {
+    import Intent = android.content.Intent;
+    import Drawable = android.graphics.drawable.Drawable;
+    import Menu = android.view.Menu;
+    import View = android.view.View;
+    class MenuItem {
+        private mId;
+        private mGroup;
+        private mCategoryOrder;
+        private mOrdering;
+        private mTitle;
+        private mIntent;
+        private mIconDrawable;
+        private mVisible;
+        private mEnable;
+        private mClickListener;
+        private mActionView;
+        private mMenu;
+        constructor(menu: Menu, group: number, id: number, categoryOrder: number, ordering: number, title: string);
+        getItemId(): number;
+        getGroupId(): number;
+        getOrder(): number;
+        setTitle(title: string): MenuItem;
+        getTitle(): string;
+        setIcon(icon: Drawable): MenuItem;
+        getIcon(): Drawable;
+        setIntent(intent: Intent): MenuItem;
+        getIntent(): Intent;
+        setVisible(visible: boolean): MenuItem;
+        isVisible(): boolean;
+        setEnabled(enabled: boolean): MenuItem;
+        isEnabled(): boolean;
+        setOnMenuItemClickListener(menuItemClickListener: MenuItem.OnMenuItemClickListener): MenuItem;
+        setActionView(view: View): MenuItem;
+        getActionView(): View;
+        invoke(): boolean;
+    }
+    module MenuItem {
+        interface OnMenuItemClickListener {
+            onMenuItemClick(item: MenuItem): boolean;
+        }
+    }
+}
+declare module android.view {
+    import MenuItem = android.view.MenuItem;
+    import ArrayList = java.util.ArrayList;
+    import Context = android.content.Context;
+    class Menu {
+        private mItems;
+        private mVisibleItems;
+        private mCallback;
+        private mContext;
+        constructor(context: Context);
+        getContext(): Context;
+        add(title: string): MenuItem;
+        add(groupId: number, itemId: number, order: number, title: string): MenuItem;
+        private addInternal(group, id, categoryOrder, title);
+        removeItem(id: number): void;
+        removeGroup(groupId: number): void;
+        private removeItemAtInt(index, updateChildrenOnMenuViews);
+        clear(): void;
+        setGroupVisible(group: number, visible: boolean): void;
+        setGroupEnabled(group: number, enabled: boolean): void;
+        hasVisibleItems(): boolean;
+        findItem(id: number): MenuItem;
+        findItemIndex(id: number): number;
+        findGroupIndex(group: number, start?: number): number;
+        size(): number;
+        getItem(index: number): MenuItem;
+        onItemsChanged(structureChanged: boolean): void;
+        getRootMenu(): Menu;
+        setCallback(cb: Menu.Callback): void;
+        dispatchMenuItemSelected(menu: Menu, item: MenuItem): boolean;
+        getVisibleItems(): ArrayList<MenuItem>;
+    }
+    module Menu {
+        var USER_MASK: number;
+        var USER_SHIFT: number;
+        var CATEGORY_MASK: number;
+        var CATEGORY_SHIFT: number;
+        var NONE: number;
+        var FIRST: number;
+        var CATEGORY_CONTAINER: number;
+        var CATEGORY_SYSTEM: number;
+        var CATEGORY_SECONDARY: number;
+        var CATEGORY_ALTERNATIVE: number;
+        var FLAG_APPEND_TO_GROUP: number;
+        var FLAG_PERFORM_NO_CLOSE: number;
+        var FLAG_ALWAYS_PERFORM_CLOSE: number;
+        interface Callback {
+            onMenuItemSelected(menu: Menu, item: MenuItem): boolean;
+        }
+    }
+}
+declare module android.view.menu {
+    import KeyEvent = android.view.KeyEvent;
+    import MenuItem = android.view.MenuItem;
+    import Menu = android.view.Menu;
+    import View = android.view.View;
+    import ViewGroup = android.view.ViewGroup;
+    import Context = android.content.Context;
+    import ViewTreeObserver = android.view.ViewTreeObserver;
+    import AdapterView = android.widget.AdapterView;
+    import BaseAdapter = android.widget.BaseAdapter;
+    import PopupWindow = android.widget.PopupWindow;
+    class MenuPopupHelper implements AdapterView.OnItemClickListener, View.OnKeyListener, ViewTreeObserver.OnGlobalLayoutListener, PopupWindow.OnDismissListener {
+        private static TAG;
+        static ITEM_LAYOUT: string;
+        private mContext;
+        private mInflater;
+        private mPopup;
+        private mMenu;
+        private mPopupMaxWidth;
+        private mAnchorView;
+        private mTreeObserver;
+        private mAdapter;
+        private mMeasureParent;
+        constructor(context: Context, menu: Menu, anchorView?: View);
+        setAnchorView(anchor: View): void;
+        show(): void;
+        tryShow(): boolean;
+        dismiss(): void;
+        onDismiss(): void;
+        isShowing(): boolean;
+        onItemClick(parent: AdapterView<any>, view: View, position: number, id: number): void;
+        onKey(v: View, keyCode: number, event: KeyEvent): boolean;
+        private measureContentWidth(adapter);
+        onGlobalLayout(): void;
+    }
+    module MenuPopupHelper {
+        class MenuAdapter extends BaseAdapter {
+            _MenuPopupHelper_this: MenuPopupHelper;
+            private mAdapterMenu;
+            constructor(menu: Menu, arg: MenuPopupHelper);
+            getCount(): number;
+            getItem(position: number): MenuItem;
+            getItemId(position: number): number;
+            getView(position: number, convertView: View, parent: ViewGroup): View;
+            notifyDataSetChanged(): void;
+        }
     }
 }
 declare module android.support.v4.view {
@@ -10147,12 +10339,56 @@ declare module uk.co.senab.photoview {
         protected onAttachedToWindow(): void;
     }
 }
+declare module android.app {
+    import Drawable = android.graphics.drawable.Drawable;
+    import View = android.view.View;
+    import ViewGroup = android.view.ViewGroup;
+    import FrameLayout = android.widget.FrameLayout;
+    class ActionBar extends FrameLayout {
+        private mCenterLayout;
+        private mCustomView;
+        private mTitleView;
+        private mSubTitleView;
+        private mActionLeft;
+        private mActionRight;
+        constructor(context: android.content.Context, bindElement?: HTMLElement, defStyle?: any);
+        setCustomView(view: View, layoutParams?: ViewGroup.MarginLayoutParams): void;
+        setIcon(icon: Drawable): void;
+        setLogo(logo: Drawable): void;
+        setTitle(title: string): void;
+        setSubtitle(subtitle: string): void;
+        getCustomView(): View;
+        getTitle(): string;
+        getSubtitle(): string;
+        show(): void;
+        hide(): void;
+        isShowing(): boolean;
+        setActionLeft(name: string, icon: Drawable, listener: View.OnClickListener): void;
+        hideActionLeft(): void;
+        setActionRight(name: string, icon: Drawable, listener: View.OnClickListener): void;
+        hideActionRight(): void;
+    }
+    module ActionBar {
+    }
+}
+declare module android.app {
+    class ActionBarActivity extends Activity {
+        private mActionBar;
+        protected onCreate(savedInstanceState?: android.os.Bundle): void;
+        private initActionBar();
+        private initDefaultBackFinish();
+        setActionBar(actionBar: ActionBar): void;
+        getActionBar(): ActionBar;
+        protected onTitleChanged(title: string, color: number): void;
+    }
+}
 declare module androidui.widget {
     import View = android.view.View;
     class HtmlBaseView extends View {
         constructor(context?: android.content.Context, bindElement?: HTMLElement, defStyle?: any);
         onTouchEvent(event: android.view.MotionEvent): boolean;
         requestSyncBoundToElement(immediately?: boolean): void;
+        setLayerType(layerType: number): void;
         protected onAttachedToWindow(): void;
     }
 }
@@ -10391,11 +10627,13 @@ declare module androidui.native {
 }
 declare module androidui.native {
     import NetImage = androidui.image.NetImage;
+    import Rect = android.graphics.Rect;
     class NativeImage extends NetImage {
         imageId: number;
         protected createImage(): void;
         protected loadImage(): void;
         recycle(): void;
+        getPixels(bound: Rect, callBack: (data: number[]) => void): void;
         private static notifyLoadFinish(imageId, width, height);
         private static notifyLoadError(imageId);
     }
