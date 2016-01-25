@@ -5,14 +5,18 @@ packageName="my.app";
 dReference="../../androidui-sdk/android-ui.d.ts";
 
 
-
 #== don't modify below code ==
+
+#init node_modules, include typescript & babel
+if [ ! -d ./node_modules ]; then
+  npm install
+fi
 
 # pack resources into js. Ensure you have installed nodejs: http://www.nodejs.org
 node build_res.js $packageName $dReference
 
 # convert typescript into es6. Ensure you have installed typescript: http://www.typescriptlang.org/
-tsc -p ./
+node_modules/.bin/tsc -p ./
 
 # convert es6 file to es5 file. Ensure you have installed babel: https://babeljs.io/
-babel build/app.js -o build/app.es5.js -s
+node_modules/.bin/babel build/app.js --out-file build/app.es5.js --source-maps --presets=es2015
