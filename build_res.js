@@ -125,7 +125,7 @@ function buildLayout(){
     function travelElement(ele){
         if(ele){
             //android:id="@+id/xx" ==> id="xx",
-            var id = ele.getAttribute('android:id');
+            var id = ele.getAttribute('android:id') || ele.getAttribute('id');
             ele.removeAttribute('android:id');
             if(id){
                 if(id.startsWith('@+id/')) id = id.substring('@+id/'.length);
