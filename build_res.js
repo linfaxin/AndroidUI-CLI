@@ -12,7 +12,6 @@ if(!fs.existsSync('gen/R'))fs.mkdirSync('gen/R');
 buildLayout();
 buildValues();
 buildImage();
-buildID();
 
 function buildImage(){
     var path = 'res/image';
@@ -231,8 +230,4 @@ module ${packageName}.R {
 }`;
 
     fs.writeFile('gen/R/resources.ts', str, 'utf-8');
-}
-
-function buildID(){
-    //TODO parse html & generate ids to 'id.ts'
 }
