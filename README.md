@@ -2,6 +2,8 @@
 
 This is a Hello World WebApp for AndroidUI. 
 
+Ensure you has installed nodejs, and run 'npm install' at project dir.
+
 If you want to create a new AndroidUI project, these files you should copy to:
 
 1. build.sh : to build the project, you should change the 'packageName' defined in the file. Open the file to see detail.
