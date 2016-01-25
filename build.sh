@@ -8,9 +8,7 @@ dReference="../../androidui-sdk/android-ui.d.ts";
 #== don't modify below code ==
 
 #init node_modules, include typescript & babel
-if [ ! -d ./node_modules ]; then
-  npm install
-fi
+npm install
 
 # pack resources into js. Ensure you have installed nodejs: http://www.nodejs.org
 node build_res.js $packageName $dReference

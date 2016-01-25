@@ -13,4 +13,8 @@
     <ConfirmationsSetting value="0" id="Add" />
     <ConfirmationsSetting value="0" id="Remove" />
   </component>
+  <component name="ProjectResources">
+    <resource url="android" location="$PROJECT_DIR$/androidui-sdk/android-layout-xml.xsd" />
+    <resource url="http://schemas.android.com/apk/res/android" location="$PROJECT_DIR$/androidui-sdk/schemas.android.com.apk.res.android.xsd" />
+  </component>
 </project>
