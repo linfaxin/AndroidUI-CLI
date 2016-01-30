@@ -1,5 +1,5 @@
 declare module androidui {
-    var sdk_version: string;
+    var sdk_version_info: string;
 }
 declare module java.util {
     interface List<T> {
@@ -283,7 +283,7 @@ declare module android.graphics {
         static rgb(red: number, green: number, blue: number): number;
         static argb(alpha: number, red: number, green: number, blue: number): number;
         static rgba(red: number, green: number, blue: number, alpha: number): number;
-        static parseColor(colorString: string): number;
+        static parseColor(colorString: string, defaultColor?: number): number;
         static toARGBHex(color: number): string;
         static toRGBAFunc(color: number): string;
         static getHtmlColor(color: string): number;
@@ -562,14 +562,14 @@ declare module android.graphics {
     import Rect = android.graphics.Rect;
     import NetImage = androidui.image.NetImage;
     class Canvas {
-        private mCanvasElement;
+        protected mCanvasElement: HTMLCanvasElement;
         private mWidth;
         private mHeight;
         private _mCanvasContent;
         private _saveCount;
-        private mCurrentClip;
+        protected mCurrentClip: Rect;
         private mClipStateMap;
-        private static TempMatrixValue;
+        protected static TempMatrixValue: number[];
         static DIRECTION_LTR: number;
         static DIRECTION_RTL: number;
         private static sRectPool;
@@ -617,16 +617,16 @@ declare module android.graphics {
         protected drawImageImpl(image: NetImage, srcRect?: Rect, dstRect?: Rect): void;
         drawRect(rect: Rect, paint: Paint): any;
         drawRect(left: number, top: number, right: number, bottom: number, paint: Paint): any;
-        protected drawRectImpl(left: number, top: number, width: number, height: number, paint: Paint): void;
+        protected drawRectImpl(left: number, top: number, width: number, height: number, style: Paint.Style): void;
         private applyFillOrStrokeToContent(style);
         drawOval(oval: RectF, paint: Paint): void;
-        protected drawOvalImpl(oval: RectF, paint: Paint): void;
+        protected drawOvalImpl(oval: RectF, style: Paint.Style): void;
         drawCircle(cx: number, cy: number, radius: number, paint: Paint): void;
-        protected drawCircleImpl(cx: number, cy: number, radius: number, paint: Paint): void;
+        protected drawCircleImpl(cx: number, cy: number, radius: number, style: Paint.Style): void;
         drawArc(oval: RectF, startAngle: number, sweepAngle: number, useCenter: boolean, paint: Paint): void;
-        protected drawArcImpl(oval: RectF, startAngle: number, sweepAngle: number, useCenter: boolean, paint: Paint): void;
+        protected drawArcImpl(oval: RectF, startAngle: number, sweepAngle: number, useCenter: boolean, style: Paint.Style): void;
         drawRoundRect(rect: RectF, radiusTopLeft: number, radiusTopRight: number, radiusBottomRight: number, radiusBottomLeft: number, paint: Paint): void;
-        protected drawRoundRectImpl(rect: RectF, radiusTopLeft: number, radiusTopRight: number, radiusBottomRight: number, radiusBottomLeft: number, paint: Paint): void;
+        protected drawRoundRectImpl(rect: RectF, radiusTopLeft: number, radiusTopRight: number, radiusBottomRight: number, radiusBottomLeft: number, style: Paint.Style): void;
         drawPath(path: Path, paint: Paint): void;
         drawText_count(text: string, index: number, count: number, x: number, y: number, paint: Paint): void;
         drawText_end(text: string, start: number, end: number, x: number, y: number, paint: Paint): void;
@@ -688,7 +688,8 @@ declare module android.graphics.drawable {
         invalidateSelf(): void;
         scheduleSelf(what: any, when: any): void;
         unscheduleSelf(what: any): void;
-        abstract setAlpha(alpha: number): void;
+        abstract: any;
+        setAlpha(alpha: number): void;
         getAlpha(): number;
         isStateful(): boolean;
         setState(stateSet: Array<number>): boolean;
@@ -1026,6 +1027,7 @@ declare module android.R {
         static action_bar: string;
         static alert_dialog: string;
         static alert_dialog_progress: string;
+        static id: string;
         static popup_menu_item_layout: string;
         static select_dialog: string;
         static select_dialog_item: string;
@@ -1897,30 +1899,41 @@ declare module android.graphics.drawable {
     }
 }
 declare module android.R {
-    class id {
-        static content: string;
-        static background: string;
-        static secondaryProgress: string;
-        static progress: string;
-        static contentPanel: string;
-        static topPanel: string;
-        static buttonPanel: string;
-        static customPanel: string;
-        static custom: string;
-        static titleDivider: string;
-        static titleDividerTop: string;
-        static title_template: string;
-        static icon: string;
-        static alertTitle: string;
-        static scrollView: string;
-        static message: string;
-        static button1: string;
-        static button2: string;
-        static button3: string;
-        static leftSpacer: string;
-        static rightSpacer: string;
-        static text1: string;
-    }
+    var id: {
+        "action_bar_center_layout": string;
+        "action_bar_title": string;
+        "action_bar_sub_title": string;
+        "action_bar_left": string;
+        "action_bar_right": string;
+        "parentPanel": string;
+        "topPanel": string;
+        "titleDividerTop": string;
+        "title_template": string;
+        "icon": string;
+        "alertTitle": string;
+        "titleDivider": string;
+        "contentPanel": string;
+        "scrollView": string;
+        "message": string;
+        "customPanel": string;
+        "custom": string;
+        "buttonPanel": string;
+        "button2": string;
+        "button3": string;
+        "button1": string;
+        "progress": string;
+        "progress_percent": string;
+        "progress_number": string;
+        "content": string;
+        "background": string;
+        "secondaryProgress": string;
+        "leftSpacer": string;
+        "rightSpacer": string;
+        "text1": string;
+        "title": string;
+        "shortcut": string;
+        "select_dialog_listview": string;
+    };
 }
 declare module android.R {
     import Drawable = android.graphics.drawable.Drawable;
@@ -2347,17 +2360,60 @@ declare module android.R {
         static viewStyle: any;
         static textViewStyle: {
             textSize: string;
+            layerType: string;
             textColor: content.res.ColorStateList;
         };
-        static buttonStyle: any;
+        static buttonStyle: {
+            textSize: string;
+            layerType: string;
+            textColor: content.res.ColorStateList;
+        } & {
+            background: Drawable;
+            focusable: boolean;
+            clickable: boolean;
+            minHeight: string;
+            minWidth: string;
+            textSize: string;
+            gravity: number;
+        };
         static imageButtonStyle: {
             background: Drawable;
             focusable: boolean;
             clickable: boolean;
             gravity: number;
         };
-        static checkboxStyle: any;
-        static radiobuttonStyle: any;
+        static checkboxStyle: {
+            textSize: string;
+            layerType: string;
+            textColor: content.res.ColorStateList;
+        } & {
+            background: Drawable;
+            focusable: boolean;
+            clickable: boolean;
+            minHeight: string;
+            minWidth: string;
+            textSize: string;
+            gravity: number;
+        } & {
+            background: any;
+            button: Drawable;
+        };
+        static radiobuttonStyle: {
+            textSize: string;
+            layerType: string;
+            textColor: content.res.ColorStateList;
+        } & {
+            background: Drawable;
+            focusable: boolean;
+            clickable: boolean;
+            minHeight: string;
+            minWidth: string;
+            textSize: string;
+            gravity: number;
+        } & {
+            background: any;
+            button: Drawable;
+        };
         static checkedTextViewStyle: {
             textAlignment: string;
         };
@@ -2382,8 +2438,40 @@ declare module android.R {
             maxHeight: string;
             mirrorForRtl: boolean;
         };
-        static progressBarStyleSmall: any;
-        static progressBarStyleLarge: any;
+        static progressBarStyleSmall: {
+            indeterminateOnly: boolean;
+            indeterminateDrawable: Drawable;
+            indeterminateBehavior: string;
+            indeterminateDuration: number;
+            minWidth: string;
+            maxWidth: string;
+            minHeight: string;
+            maxHeight: string;
+            mirrorForRtl: boolean;
+        } & {
+            indeterminateDrawable: Drawable;
+            minWidth: string;
+            maxWidth: string;
+            minHeight: string;
+            maxHeight: string;
+        };
+        static progressBarStyleLarge: {
+            indeterminateOnly: boolean;
+            indeterminateDrawable: Drawable;
+            indeterminateBehavior: string;
+            indeterminateDuration: number;
+            minWidth: string;
+            maxWidth: string;
+            minHeight: string;
+            maxHeight: string;
+            mirrorForRtl: boolean;
+        } & {
+            indeterminateDrawable: Drawable;
+            minWidth: string;
+            maxWidth: string;
+            minHeight: string;
+            maxHeight: string;
+        };
         static seekBarStyle: {
             indeterminateOnly: boolean;
             progressDrawable: Drawable;
@@ -2408,8 +2496,44 @@ declare module android.R {
             thumb: any;
             mirrorForRtl: boolean;
         };
-        static ratingBarStyleIndicator: any;
-        static ratingBarStyleSmall: any;
+        static ratingBarStyleIndicator: {
+            indeterminateOnly: boolean;
+            progressDrawable: Drawable;
+            indeterminateDrawable: Drawable;
+            minHeight: string;
+            maxHeight: string;
+            numStars: string;
+            stepSize: string;
+            thumb: any;
+            mirrorForRtl: boolean;
+        } & {
+            indeterminateOnly: boolean;
+            progressDrawable: Drawable;
+            indeterminateDrawable: Drawable;
+            minHeight: string;
+            maxHeight: string;
+            thumb: any;
+            isIndicator: boolean;
+        };
+        static ratingBarStyleSmall: {
+            indeterminateOnly: boolean;
+            progressDrawable: Drawable;
+            indeterminateDrawable: Drawable;
+            minHeight: string;
+            maxHeight: string;
+            numStars: string;
+            stepSize: string;
+            thumb: any;
+            mirrorForRtl: boolean;
+        } & {
+            indeterminateOnly: boolean;
+            progressDrawable: Drawable;
+            indeterminateDrawable: Drawable;
+            minHeight: string;
+            maxHeight: string;
+            thumb: any;
+            isIndicator: boolean;
+        };
         static gridViewStyle: {
             listSelector: Drawable;
             numColumns: number;
@@ -2419,7 +2543,13 @@ declare module android.R {
             listSelector: Drawable;
             dividerHeight: number;
         };
-        static expandableListViewStyle: any;
+        static expandableListViewStyle: {
+            divider: Drawable;
+            listSelector: Drawable;
+            dividerHeight: number;
+        } & {
+            childDivider: Drawable;
+        };
         static numberPickerStyle: {
             orientation: string;
             solidColor: string;
@@ -3266,6 +3396,7 @@ declare module android.view {
     import Canvas = android.graphics.Canvas;
     import ViewRootImpl = android.view.ViewRootImpl;
     class Surface {
+        static DrawToCacheFirstMode: boolean;
         private mCanvasElement;
         private viewRoot;
         private mLockedRect;
@@ -3283,6 +3414,7 @@ declare module android.view {
     }
 }
 declare module PageStack {
+    var DEBUG: boolean;
     var currentStack: StateStack;
     var backListener: () => boolean;
     var pageOpenHandler: (pageId: string, pageExtra?: any, isRestore?: boolean) => boolean;
@@ -3362,7 +3494,7 @@ declare module android.R {
         static prll_footer_state_ready: string;
         static prll_footer_state_fail: string;
         static prll_footer_state_no_more: string;
-        static zh(): void;
+        private static zh();
     }
 }
 declare module androidui {
@@ -3403,7 +3535,6 @@ declare module androidui {
 declare module androidui {
     class AndroidUIElement extends HTMLDivElement {
         AndroidUI: AndroidUI;
-        private performCreate();
         createdCallback(): void;
         attachedCallback(): void;
         detachedCallback(): void;
@@ -3972,7 +4103,8 @@ declare module android.text.style {
     abstract class CharacterStyle {
         static type: symbol;
         mType: symbol;
-        abstract updateDrawState(tp: TextPaint): void;
+        abstract: any;
+        updateDrawState(tp: TextPaint): void;
         static wrap(cs: CharacterStyle): CharacterStyle;
         getUnderlying(): CharacterStyle;
     }
@@ -7991,13 +8123,43 @@ declare module android.widget {
 declare module android.widget {
     import CompoundButton = android.widget.CompoundButton;
     class CheckBox extends CompoundButton {
-        constructor(context?: android.content.Context, bindElement?: HTMLElement, defStyle?: any);
+        constructor(context?: android.content.Context, bindElement?: HTMLElement, defStyle?: {
+            textSize: string;
+            layerType: string;
+            textColor: content.res.ColorStateList;
+        } & {
+            background: graphics.drawable.Drawable;
+            focusable: boolean;
+            clickable: boolean;
+            minHeight: string;
+            minWidth: string;
+            textSize: string;
+            gravity: number;
+        } & {
+            background: any;
+            button: graphics.drawable.Drawable;
+        });
     }
 }
 declare module android.widget {
     import CompoundButton = android.widget.CompoundButton;
     class RadioButton extends CompoundButton {
-        constructor(context?: android.content.Context, bindElement?: HTMLElement, defStyle?: any);
+        constructor(context?: android.content.Context, bindElement?: HTMLElement, defStyle?: {
+            textSize: string;
+            layerType: string;
+            textColor: content.res.ColorStateList;
+        } & {
+            background: graphics.drawable.Drawable;
+            focusable: boolean;
+            clickable: boolean;
+            minHeight: string;
+            minWidth: string;
+            textSize: string;
+            gravity: number;
+        } & {
+            background: any;
+            button: graphics.drawable.Drawable;
+        });
         toggle(): void;
     }
 }
@@ -8363,7 +8525,13 @@ declare module android.widget {
         private static CHILD_LAST_STATE_SET;
         private mChildDivider;
         private mIndicatorRect;
-        constructor(context?: android.content.Context, bindElement?: HTMLElement, defStyle?: any);
+        constructor(context?: android.content.Context, bindElement?: HTMLElement, defStyle?: {
+            divider: Drawable;
+            listSelector: Drawable;
+            dividerHeight: number;
+        } & {
+            childDivider: Drawable;
+        });
         private isRtlCompatibilityMode();
         private hasRtlSupport();
         onRtlPropertiesChanged(layoutDirection: number): void;
@@ -8900,7 +9068,8 @@ declare module android.widget {
         recycleAllViews(): void;
         setSelection(position: number, animate?: boolean): void;
         setSelectionInt(position: number, animate: boolean): void;
-        abstract layoutSpinner(delta: number, animate: boolean): void;
+        abstract: any;
+        layoutSpinner(delta: number, animate: boolean): void;
         getSelectedView(): View;
         requestLayout(): void;
         getAdapter(): SpinnerAdapter;
@@ -9968,7 +10137,7 @@ declare module android.support.v4.widget {
             onDrawerClosed(drawerView: View): void;
             onDrawerStateChanged(newState: number): void;
         }
-        abstract class SimpleDrawerListener implements DrawerLayout.DrawerListener {
+        class SimpleDrawerListener implements DrawerLayout.DrawerListener {
             onDrawerSlide(drawerView: View, slideOffset: number): void;
             onDrawerOpened(drawerView: View): void;
             onDrawerClosed(drawerView: View): void;
@@ -10594,11 +10763,11 @@ declare module androidui.native {
         protected clipRectImpl(left: number, top: number, width: number, height: number): void;
         protected drawCanvasImpl(canvas: android.graphics.Canvas, offsetX: number, offsetY: number): void;
         protected drawImageImpl(image: androidui.image.NetImage, dstRect: android.graphics.Rect): void;
-        protected drawRectImpl(left: number, top: number, width: number, height: number, paint: android.graphics.Paint): void;
-        protected drawOvalImpl(oval: android.graphics.RectF, paint: android.graphics.Paint): void;
-        protected drawCircleImpl(cx: number, cy: number, radius: number, paint: android.graphics.Paint): void;
-        protected drawArcImpl(oval: android.graphics.RectF, startAngle: number, sweepAngle: number, useCenter: boolean, paint: android.graphics.Paint): void;
-        protected drawRoundRectImpl(rect: android.graphics.RectF, radiusTopLeft: number, radiusTopRight: number, radiusBottomRight: number, radiusBottomLeft: number, paint: android.graphics.Paint): void;
+        protected drawRectImpl(left: number, top: number, width: number, height: number, style: android.graphics.Paint.Style): void;
+        protected drawOvalImpl(oval: android.graphics.RectF, style: android.graphics.Paint.Style): void;
+        protected drawCircleImpl(cx: number, cy: number, radius: number, style: android.graphics.Paint.Style): void;
+        protected drawArcImpl(oval: android.graphics.RectF, startAngle: number, sweepAngle: number, useCenter: boolean, style: android.graphics.Paint.Style): void;
+        protected drawRoundRectImpl(rect: android.graphics.RectF, radiusTopLeft: number, radiusTopRight: number, radiusBottomRight: number, radiusBottomLeft: number, style: android.graphics.Paint.Style): void;
         protected drawTextImpl(text: string, x: number, y: number, style: android.graphics.Paint.Style): void;
         protected setColorImpl(color: number, style?: android.graphics.Paint.Style): void;
         protected multiplyAlphaImpl(alpha: number): void;
