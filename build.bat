@@ -26,4 +26,5 @@ echo "converting ES6 to ES5"
 call node_modules/.bin/babel build/app.js --out-file build/app.es5.js --source-maps --presets=es2015
 
 echo "build finish"
+
 pause
