@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<xs:schema xmlns:android="http://schemas.android.com/apk/res/android" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+<xs:schema xmlns:android="http://schemas.android.com/apk/res/android" xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="android">
   <xs:import schemaLocation="schemas.android.com.apk.res.android.xsd" namespace="http://schemas.android.com/apk/res/android" />
   <xs:group name="any-view">
     <xs:choice>
