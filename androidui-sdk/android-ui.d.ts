@@ -1373,6 +1373,14 @@ declare module android.util {
         static LOCALE: number;
     }
 }
+declare module java.util {
+    class Arrays {
+        static sort(a: number[], fromIndex: number, toIndex: number): void;
+        private static rangeCheck(arrayLength, fromIndex, toIndex);
+        static asList<T>(array: T[]): List<T>;
+        static equals(a: any[], a2: any[]): boolean;
+    }
+}
 declare module androidui.attr {
     class StateAttr {
         private stateSpec;
@@ -1382,9 +1390,10 @@ declare module androidui.attr {
         hasAttr(name: string): boolean;
         getAttrMap(): Map<string, string>;
         putAll(stateAttr: StateAttr): void;
+        isDefaultState(): boolean;
         isStateEquals(state: number[]): boolean;
         isStateMatch(state: number[]): boolean;
-        mergeRemovedFrom(another: StateAttr): Map<string, string>;
+        createDiffKeyAsNullValueAttrMap(another: StateAttr): Map<string, string>;
         static parseStateAttrName(stateDesc: any): Set<number>;
     }
 }
@@ -1392,17 +1401,16 @@ declare module androidui.attr {
     import View = android.view.View;
     class StateAttrList {
         private list;
-        private list_reverse;
-        private match_list;
+        private matchedAttrCache;
         private mView;
         constructor(view: View);
         private _initStyleAttributes(ele, inParseState);
         private _initStyleAttr(attr, ele, inParseState);
-        private static EmptyArray;
         getDefaultStateAttr(): StateAttr;
-        getStateAttr(state: number[]): StateAttr;
+        private getStateAttr(state);
         private optStateAttr(state);
-        getMatchedAttr(state: number[]): StateAttr;
+        getMatchedStateAttr(state: number[]): StateAttr;
+        removeAttrAllState(attrName: string): void;
     }
 }
 declare module androidui.attr {
@@ -1420,7 +1428,7 @@ declare module androidui.attr {
         constructor(host: View | ViewGroup.LayoutParams);
         addAttr(attrName: string, onAttrChange: (newValue: any) => void, stashAttrValueWhenStateChange?: () => any): void;
         onAttrChange(attrName: string, attrValue: any, context: Context): void;
-        getAttrValue(attrName: string): any;
+        getAttrValue(attrName: string): string;
         private getRefObject(ref);
         private setRefObject(obj);
         parsePaddingMarginLTRB(value: any): string[];
@@ -1478,6 +1486,13 @@ declare module androidui.image {
         }
     }
 }
+declare module androidui.util {
+    class Platform {
+        static isIOS: boolean;
+        static isAndroid: boolean;
+        static isWeChat: boolean;
+    }
+}
 declare module android.view {
     class KeyEvent {
         static KEYCODE_DPAD_UP: number;
@@ -1489,14 +1504,139 @@ declare module android.view {
         static KEYCODE_TAB: number;
         static KEYCODE_SPACE: number;
         static KEYCODE_ESCAPE: number;
+        static KEYCODE_Backspace: number;
         static KEYCODE_PAGE_UP: number;
         static KEYCODE_PAGE_DOWN: number;
         static KEYCODE_MOVE_HOME: number;
         static KEYCODE_MOVE_END: number;
+        static KEYCODE_Digit0: number;
+        static KEYCODE_Digit1: number;
+        static KEYCODE_Digit2: number;
+        static KEYCODE_Digit3: number;
+        static KEYCODE_Digit4: number;
+        static KEYCODE_Digit5: number;
+        static KEYCODE_Digit6: number;
+        static KEYCODE_Digit7: number;
+        static KEYCODE_Digit8: number;
+        static KEYCODE_Digit9: number;
+        static KEYCODE_Key_a: number;
+        static KEYCODE_Key_b: number;
+        static KEYCODE_Key_c: number;
+        static KEYCODE_Key_d: number;
+        static KEYCODE_Key_e: number;
+        static KEYCODE_Key_f: number;
+        static KEYCODE_Key_g: number;
+        static KEYCODE_Key_h: number;
+        static KEYCODE_Key_i: number;
+        static KEYCODE_Key_j: number;
+        static KEYCODE_Key_k: number;
+        static KEYCODE_Key_l: number;
+        static KEYCODE_Key_m: number;
+        static KEYCODE_Key_n: number;
+        static KEYCODE_Key_o: number;
+        static KEYCODE_Key_p: number;
+        static KEYCODE_Key_q: number;
+        static KEYCODE_Key_r: number;
+        static KEYCODE_Key_s: number;
+        static KEYCODE_Key_t: number;
+        static KEYCODE_Key_u: number;
+        static KEYCODE_Key_v: number;
+        static KEYCODE_Key_w: number;
+        static KEYCODE_Key_x: number;
+        static KEYCODE_Key_y: number;
+        static KEYCODE_Key_z: number;
+        static KEYCODE_KeyA: number;
+        static KEYCODE_KeyB: number;
+        static KEYCODE_KeyC: number;
+        static KEYCODE_KeyD: number;
+        static KEYCODE_KeyE: number;
+        static KEYCODE_KeyF: number;
+        static KEYCODE_KeyG: number;
+        static KEYCODE_KeyH: number;
+        static KEYCODE_KeyI: number;
+        static KEYCODE_KeyJ: number;
+        static KEYCODE_KeyK: number;
+        static KEYCODE_KeyL: number;
+        static KEYCODE_KeyM: number;
+        static KEYCODE_KeyN: number;
+        static KEYCODE_KeyO: number;
+        static KEYCODE_KeyP: number;
+        static KEYCODE_KeyQ: number;
+        static KEYCODE_KeyR: number;
+        static KEYCODE_KeyS: number;
+        static KEYCODE_KeyT: number;
+        static KEYCODE_KeyU: number;
+        static KEYCODE_KeyV: number;
+        static KEYCODE_KeyW: number;
+        static KEYCODE_KeyX: number;
+        static KEYCODE_KeyY: number;
+        static KEYCODE_KeyZ: number;
+        static KEYCODE_Semicolon: number;
+        static KEYCODE_LessThan: number;
+        static KEYCODE_Equal: number;
+        static KEYCODE_MoreThan: number;
+        static KEYCODE_Question: number;
+        static KEYCODE_Comma: number;
+        static KEYCODE_Period: number;
+        static KEYCODE_Slash: number;
+        static KEYCODE_Quotation: number;
+        static KEYCODE_LeftBracket: number;
+        static KEYCODE_Backslash: number;
+        static KEYCODE_RightBracket: number;
+        static KEYCODE_Minus: number;
+        static KEYCODE_Colon: number;
+        static KEYCODE_Double_Quotation: number;
+        static KEYCODE_Backquote: number;
+        static KEYCODE_Tilde: number;
+        static KEYCODE_Left_Brace: number;
+        static KEYCODE_Or: number;
+        static KEYCODE_Right_Brace: number;
+        static KEYCODE_Del: number;
+        static KEYCODE_Exclamation: number;
+        static KEYCODE_Right_Parenthesis: number;
+        static KEYCODE_AT: number;
+        static KEYCODE_Sharp: number;
+        static KEYCODE_Dollar: number;
+        static KEYCODE_Percent: number;
+        static KEYCODE_Power: number;
+        static KEYCODE_And: number;
+        static KEYCODE_Asterisk: number;
+        static KEYCODE_Left_Parenthesis: number;
+        static KEYCODE_Underline: number;
+        static KEYCODE_Add: number;
         static KEYCODE_BACK: number;
         static KEYCODE_MENU: number;
+        static KEYCODE_CHANGE_ANDROID_CHROME: {
+            noMeta: {
+                186: number;
+                187: number;
+                188: number;
+                189: number;
+                190: number;
+                191: number;
+                192: number;
+                219: number;
+                220: number;
+                221: number;
+            };
+            shift: {
+                186: number;
+                187: number;
+                188: number;
+                189: number;
+                190: number;
+                191: number;
+                192: number;
+                219: number;
+                220: number;
+                221: number;
+            };
+            ctrl: {};
+            alt: {};
+        };
         static ACTION_DOWN: number;
         static ACTION_UP: number;
+        static META_MASK_SHIFT: number;
         static META_ALT_ON: number;
         static META_SHIFT_ON: number;
         static META_CTRL_ON: number;
@@ -1941,6 +2081,7 @@ declare module android.R {
     import StateListDrawable = android.graphics.drawable.StateListDrawable;
     class drawable {
         static btn_default: Drawable;
+        static editbox_background: Drawable;
         static btn_check: Drawable;
         static btn_radio: Drawable;
         static progress_small_holo: Drawable;
@@ -2044,6 +2185,8 @@ declare module android.R {
         static btn_rating_star_on_normal_holo_light: any;
         static btn_rating_star_on_pressed_holo_light: any;
         static dropdown_background_dark: any;
+        static editbox_background_focus_yellow: any;
+        static editbox_background_normal: any;
         static ic_menu_moreoverflow_normal_holo_dark: any;
         static menu_panel_holo_dark: any;
         static menu_panel_holo_light: any;
@@ -2102,6 +2245,8 @@ declare module android.R {
         static btn_rating_star_on_normal_holo_light: NetDrawable;
         static btn_rating_star_on_pressed_holo_light: NetDrawable;
         static dropdown_background_dark: NinePatchDrawable;
+        static editbox_background_focus_yellow: NinePatchDrawable;
+        static editbox_background_normal: NinePatchDrawable;
         static ic_menu_moreoverflow_normal_holo_dark: NetDrawable;
         static menu_panel_holo_dark: NinePatchDrawable;
         static menu_panel_holo_light: NinePatchDrawable;
@@ -2362,17 +2507,32 @@ declare module android.R {
             textSize: string;
             layerType: string;
             textColor: content.res.ColorStateList;
+            textColorHint: number;
         };
         static buttonStyle: {
             textSize: string;
             layerType: string;
             textColor: content.res.ColorStateList;
+            textColorHint: number;
         } & {
             background: Drawable;
             focusable: boolean;
             clickable: boolean;
             minHeight: string;
             minWidth: string;
+            textSize: string;
+            gravity: number;
+        };
+        static editTextStyle: {
+            textSize: string;
+            layerType: string;
+            textColor: content.res.ColorStateList;
+            textColorHint: number;
+        } & {
+            background: Drawable;
+            focusable: boolean;
+            focusableInTouchMode: boolean;
+            clickable: boolean;
             textSize: string;
             gravity: number;
         };
@@ -2386,6 +2546,7 @@ declare module android.R {
             textSize: string;
             layerType: string;
             textColor: content.res.ColorStateList;
+            textColorHint: number;
         } & {
             background: Drawable;
             focusable: boolean;
@@ -2402,6 +2563,7 @@ declare module android.R {
             textSize: string;
             layerType: string;
             textColor: content.res.ColorStateList;
+            textColorHint: number;
         } & {
             background: Drawable;
             focusable: boolean;
@@ -3246,21 +3408,20 @@ declare module android.view {
         private _syncToElementImmediatelyLock;
         private _syncToElementRun;
         requestSyncBoundToElement(immediately?: boolean): void;
-        protected _syncBoundAndScrollToElement(): void;
         private _lastSyncLeft;
         private _lastSyncTop;
         private _lastSyncWidth;
         private _lastSyncHeight;
-        protected _syncBoundToElement(): void;
         private _lastSyncScrollX;
         private _lastSyncScrollY;
-        protected _syncScrollToElement(): void;
+        protected _syncBoundAndScrollToElement(): void;
         syncVisibleToElement(): void;
         syncDrawStateToElement(): void;
         private _initAttrObserver();
         private _parseInitedAttribute();
         private _fireInitedAttributeChange();
         private _fireStateChangeToAttribute(oldState, newState);
+        private _getBinderAttrValue(key);
         private onBindElementAttributeChanged(attributeName, oldVal, newVal);
         hasAttributeIgnoreCase(name: string): boolean;
         getAttributeIgnoreCase(name: string): string;
@@ -4217,13 +4378,6 @@ declare module android.text.style {
             getTabStop(): number;
             private mTab;
         }
-    }
-}
-declare module java.util {
-    class Arrays {
-        static sort(a: number[], fromIndex: number, toIndex: number): void;
-        private static rangeCheck(arrayLength, fromIndex, toIndex);
-        static asList<T>(array: T[]): List<T>;
     }
 }
 declare module android.text {
@@ -5631,45 +5785,28 @@ declare module android.os {
     }
 }
 declare module android.text {
-    class InputType {
-        static TYPE_MASK_CLASS: number;
-        static TYPE_MASK_VARIATION: number;
-        static TYPE_MASK_FLAGS: number;
-        static TYPE_NULL: number;
-        static TYPE_CLASS_TEXT: number;
-        static TYPE_TEXT_FLAG_CAP_CHARACTERS: number;
-        static TYPE_TEXT_FLAG_CAP_WORDS: number;
-        static TYPE_TEXT_FLAG_CAP_SENTENCES: number;
-        static TYPE_TEXT_FLAG_AUTO_CORRECT: number;
-        static TYPE_TEXT_FLAG_AUTO_COMPLETE: number;
-        static TYPE_TEXT_FLAG_MULTI_LINE: number;
-        static TYPE_TEXT_FLAG_IME_MULTI_LINE: number;
-        static TYPE_TEXT_FLAG_NO_SUGGESTIONS: number;
-        static TYPE_TEXT_VARIATION_NORMAL: number;
-        static TYPE_TEXT_VARIATION_URI: number;
-        static TYPE_TEXT_VARIATION_EMAIL_ADDRESS: number;
-        static TYPE_TEXT_VARIATION_EMAIL_SUBJECT: number;
-        static TYPE_TEXT_VARIATION_SHORT_MESSAGE: number;
-        static TYPE_TEXT_VARIATION_LONG_MESSAGE: number;
-        static TYPE_TEXT_VARIATION_PERSON_NAME: number;
-        static TYPE_TEXT_VARIATION_POSTAL_ADDRESS: number;
-        static TYPE_TEXT_VARIATION_PASSWORD: number;
-        static TYPE_TEXT_VARIATION_VISIBLE_PASSWORD: number;
-        static TYPE_TEXT_VARIATION_WEB_EDIT_TEXT: number;
-        static TYPE_TEXT_VARIATION_FILTER: number;
-        static TYPE_TEXT_VARIATION_PHONETIC: number;
-        static TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS: number;
-        static TYPE_TEXT_VARIATION_WEB_PASSWORD: number;
-        static TYPE_CLASS_NUMBER: number;
-        static TYPE_NUMBER_FLAG_SIGNED: number;
-        static TYPE_NUMBER_FLAG_DECIMAL: number;
-        static TYPE_NUMBER_VARIATION_NORMAL: number;
-        static TYPE_NUMBER_VARIATION_PASSWORD: number;
-        static TYPE_CLASS_PHONE: number;
-        static TYPE_CLASS_DATETIME: number;
-        static TYPE_DATETIME_VARIATION_NORMAL: number;
-        static TYPE_DATETIME_VARIATION_DATE: number;
-        static TYPE_DATETIME_VARIATION_TIME: number;
+    enum InputType {
+        TYPE_NULL = 0,
+        TYPE_CLASS_TEXT = 1,
+        TYPE_CLASS_URI = 2,
+        TYPE_CLASS_EMAIL_ADDRESS = 3,
+        TYPE_CLASS_NUMBER = 4,
+        TYPE_CLASS_PHONE = 5,
+        TYPE_PASSWORD = 6,
+        TYPE_TEXT_PASSWORD = 7,
+        TYPE_TEXT_VISIBLE_PASSWORD = 8,
+        TYPE_NUMBER_PASSWORD = 9,
+        TYPE_NUMBER_SIGNED = 10,
+        TYPE_NUMBER_DECIMAL = 11,
+    }
+    module InputType {
+        class LimitCode {
+            static TYPE_CLASS_NUMBER: number[];
+            static TYPE_CLASS_PHONE: number[];
+            static TYPE_NUMBER_PASSWORD: number[];
+            static TYPE_NUMBER_SIGNED: number[];
+            static TYPE_NUMBER_DECIMAL: number[];
+        }
     }
 }
 declare module android.util {
@@ -6329,7 +6466,7 @@ declare module android.widget {
         getTextSize(): number;
         setTextSize(size: number): void;
         setTextSize(unit: string, size: number): void;
-        private setRawTextSize(size);
+        protected setRawTextSize(size: number): void;
         getTextScaleX(): number;
         setTextScaleX(size: number): void;
         getTypeface(): any;
@@ -6382,7 +6519,7 @@ declare module android.widget {
         setLineSpacing(add: number, mult: number): void;
         getLineSpacingMultiplier(): number;
         getLineSpacingExtra(): number;
-        private updateTextColors();
+        protected updateTextColors(): void;
         protected drawableStateChanged(): void;
         removeMisspelledSpans(spannable: Spannable): void;
         setFreezesText(freezesText: boolean): void;
@@ -7546,6 +7683,54 @@ declare module android.widget {
         }
     }
 }
+declare module android.text.method {
+    class PasswordTransformationMethod extends SingleLineTransformationMethod {
+        private static instance;
+        getTransformation(source: String, v: android.view.View): String;
+        static getInstance(): PasswordTransformationMethod;
+    }
+}
+declare module android.widget {
+    import TextUtils = android.text.TextUtils;
+    import TextView = android.widget.TextView;
+    import Context = android.content.Context;
+    class EditText extends TextView {
+        private inputElement;
+        private mSingleLineInputElement;
+        private mMultilineInputElement;
+        private mInputType;
+        private mForceDisableDraw;
+        private mMaxLength;
+        constructor(context: Context, bindElement?: HTMLElement, defStyle?: any);
+        protected initBindElement(bindElement: HTMLElement): void;
+        protected onInputValueChange(): void;
+        private switchToSingleLineInputElement();
+        private switchToMultilineInputElement();
+        private tryShowInputElement();
+        performClick(event: android.view.MotionEvent): boolean;
+        private tryDismissInputElement();
+        protected onFocusChanged(focused: boolean, direction: number, previouslyFocusedRect: android.graphics.Rect): void;
+        isInputElementShowed(): boolean;
+        private setForceDisableDrawText(disable);
+        protected updateTextColors(): void;
+        onTouchEvent(event: android.view.MotionEvent): boolean;
+        private filterKeyEvent(event);
+        private filterKeyCode(keyCode);
+        private checkFilterKeyEventToDom(event);
+        onKeyDown(keyCode: number, event: android.view.KeyEvent): boolean;
+        onKeyUp(keyCode: number, event: android.view.KeyEvent): boolean;
+        requestSyncBoundToElement(immediately?: boolean): void;
+        protected setRawTextSize(size: number): void;
+        protected onTextChanged(text: String, start: number, lengthBefore: number, lengthAfter: number): void;
+        protected onLayout(changed: boolean, left: number, top: number, right: number, bottom: number): void;
+        setGravity(gravity: number): void;
+        setInputType(type: number): void;
+        getInputType(): number;
+        private syncTextBoundInfoToInputElement();
+        protected onAttachedToWindow(): void;
+        setEllipsize(ellipsis: TextUtils.TruncateAt): void;
+    }
+}
 declare module android.widget {
     import Canvas = android.graphics.Canvas;
     import Matrix = android.graphics.Matrix;
@@ -8127,6 +8312,7 @@ declare module android.widget {
             textSize: string;
             layerType: string;
             textColor: content.res.ColorStateList;
+            textColorHint: number;
         } & {
             background: graphics.drawable.Drawable;
             focusable: boolean;
@@ -8148,6 +8334,7 @@ declare module android.widget {
             textSize: string;
             layerType: string;
             textColor: content.res.ColorStateList;
+            textColorHint: number;
         } & {
             background: graphics.drawable.Drawable;
             focusable: boolean;
@@ -9537,6 +9724,32 @@ declare module android.widget {
         }
     }
 }
+declare module android.webkit {
+    class WebViewClient {
+        onPageStarted(view: WebView, url: string): void;
+        onPageFinished(view: WebView, url: string): void;
+        onReceivedTitle(view: WebView, title: string): void;
+    }
+}
+declare module android.webkit {
+    import FrameLayout = android.widget.FrameLayout;
+    class WebView extends FrameLayout {
+        private iFrameElement;
+        private mClient;
+        constructor(context: android.content.Context, bindElement?: HTMLElement, defStyle?: any);
+        private initIFrameElement();
+        loadUrl(url: string): void;
+        loadData(data: string): void;
+        evaluateJavascript(script: string): any;
+        stopLoading(): void;
+        reload(): void;
+        getUrl(): string;
+        getTitle(): string;
+        getContentHeight(): number;
+        getContentWidth(): number;
+        setWebViewClient(client: WebViewClient): void;
+    }
+}
 declare module android.view.animation {
     import Animation = android.view.animation.Animation;
     import Transformation = android.view.animation.Transformation;
@@ -10554,10 +10767,12 @@ declare module android.app {
 declare module androidui.widget {
     import View = android.view.View;
     class HtmlBaseView extends View {
+        private mHtmlTouchAble;
         constructor(context?: android.content.Context, bindElement?: HTMLElement, defStyle?: any);
         onTouchEvent(event: android.view.MotionEvent): boolean;
+        setHtmlTouchAble(enable: boolean): void;
+        isHtmlTouchAble(): boolean;
         requestSyncBoundToElement(immediately?: boolean): void;
-        setLayerType(layerType: number): void;
         protected onAttachedToWindow(): void;
     }
 }

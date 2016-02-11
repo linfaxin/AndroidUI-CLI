@@ -1,10 +1,10 @@
 var androidui;
 (function (androidui) {
     androidui.sdk_version_info = `
-AndroidUI4Web: https://github.com/linfaxin/AndroidUI4Web
-version: 0.2.1
+AndroidUI4Web: https://github.com/linfaxin/AndroidUI-WebApp
+version: 0.4.0
 release type: Pre-release
-release date: 2016-01-31
+release date: 2016-02-12
 `;
 })(androidui || (androidui = {}));
 var java;
@@ -4578,6 +4578,7 @@ var android;
     (function (view) {
         var Rect = android.graphics.Rect;
         var ViewConfiguration = android.view.ViewConfiguration;
+        const tempBound = new Rect();
         class MotionEvent {
             constructor() {
                 this.mAction = 0;
@@ -4653,7 +4654,7 @@ var android;
                         break;
                 }
                 this.mTouchingPointers = Array.from(e.touches);
-                if (baseAction === MotionEvent.ACTION_UP) {
+                if (baseAction === MotionEvent.ACTION_UP || baseAction === MotionEvent.ACTION_CANCEL) {
                     this.mTouchingPointers.splice(actionIndex, 0, activeTouch);
                 }
                 if (this.mTouchingPointers.length > 1) {
@@ -4674,12 +4675,12 @@ var android;
                     this.mDownTime = now;
                 }
                 this.mEventTime = now;
+                const density = android.content.res.Resources.getSystem().getDisplayMetrics().density;
                 this.mXOffset = this.mYOffset = 0;
                 let edgeFlag = 0;
-                let unScaledX = activeTouch.clientX;
-                let unScaledY = activeTouch.clientY;
+                let unScaledX = activeTouch.pageX;
+                let unScaledY = activeTouch.pageY;
                 let edgeSlop = ViewConfiguration.EDGE_SLOP;
-                let tempBound = new Rect();
                 tempBound.set(windowBound);
                 tempBound.right = tempBound.left + edgeSlop;
                 if (tempBound.contains(unScaledX, unScaledY)) {
@@ -4741,11 +4742,11 @@ var android;
             }
             getX(pointerIndex = 0) {
                 let density = android.content.res.Resources.getDisplayMetrics().density;
-                return (this.mTouchingPointers[pointerIndex].clientX) * density + this.mXOffset;
+                return (this.mTouchingPointers[pointerIndex].pageX) * density + this.mXOffset;
             }
             getY(pointerIndex = 0) {
                 let density = android.content.res.Resources.getDisplayMetrics().density;
-                return (this.mTouchingPointers[pointerIndex].clientY) * density + this.mYOffset;
+                return (this.mTouchingPointers[pointerIndex].pageY) * density + this.mYOffset;
             }
             getPointerCount() {
                 return this.mTouchingPointers.length;
@@ -4763,11 +4764,11 @@ var android;
             }
             getRawX() {
                 let density = android.content.res.Resources.getDisplayMetrics().density;
-                return (this.mTouchingPointers[0].clientX) * density;
+                return (this.mTouchingPointers[0].pageX) * density;
             }
             getRawY() {
                 let density = android.content.res.Resources.getDisplayMetrics().density;
-                return (this.mTouchingPointers[0].clientY) * density;
+                return (this.mTouchingPointers[0].pageY) * density;
             }
             getHistorySize(id = this.mActivePointerId) {
                 let moveHistory = MotionEvent.TouchMoveRecord.get(id);
@@ -4776,12 +4777,12 @@ var android;
             getHistoricalX(pointerIndex, pos) {
                 let density = android.content.res.Resources.getDisplayMetrics().density;
                 let moveHistory = MotionEvent.TouchMoveRecord.get(this.mTouchingPointers[pointerIndex].identifier);
-                return (moveHistory[pos].clientX) * density + this.mXOffset;
+                return (moveHistory[pos].pageX) * density + this.mXOffset;
             }
             getHistoricalY(pointerIndex, pos) {
                 let density = android.content.res.Resources.getDisplayMetrics().density;
                 let moveHistory = MotionEvent.TouchMoveRecord.get(this.mTouchingPointers[pointerIndex].identifier);
-                return (moveHistory[pos].clientY) * density + this.mYOffset;
+                return (moveHistory[pos].pageY) * density + this.mYOffset;
             }
             getHistoricalEventTime(...args) {
                 let pos, activePointerId;
@@ -5089,6 +5090,7 @@ var android;
                 return window.setTimeout(callback, 1000 / 60);
             };
         }
+        window.requestAnimationFrame = requestAnimationFrame;
         class MessageQueue {
             static getMessages(h, args, object) {
                 let msgs = [];
@@ -5404,8 +5406,8 @@ var android;
                 if (valueWithUnit === undefined || valueWithUnit === null) {
                     throw Error('complexToDimensionPixelSize error: valueWithUnit is ' + valueWithUnit);
                 }
-                if (valueWithUnit === '' + (Number.parseInt(valueWithUnit)))
-                    return Number.parseInt(valueWithUnit);
+                if (valueWithUnit === '' + (Number.parseFloat(valueWithUnit)))
+                    return Number.parseFloat(valueWithUnit);
                 if (typeof valueWithUnit !== 'string')
                     valueWithUnit = valueWithUnit + "";
                 let scale = 1;
@@ -5454,7 +5456,7 @@ var android;
                 }
                 else if (valueWithUnit.endsWith(TypedValue.COMPLEX_UNIT_FRACTION)) {
                     valueWithUnit = valueWithUnit.replace(TypedValue.COMPLEX_UNIT_FRACTION, "");
-                    scale = Number.parseInt(valueWithUnit) / 100;
+                    scale = Number.parseFloat(valueWithUnit) / 100;
                     if (Number.isNaN(scale))
                         return 0;
                     valueWithUnit = baseValue;
@@ -5525,6 +5527,58 @@ var android;
         util.LayoutDirection = LayoutDirection;
     })(util = android.util || (android.util = {}));
 })(android || (android = {}));
+var java;
+(function (java) {
+    var util;
+    (function (util) {
+        class Arrays {
+            static sort(a, fromIndex, toIndex) {
+                Arrays.rangeCheck(a.length, fromIndex, toIndex);
+                var sort = new Array(toIndex - fromIndex);
+                for (let i = fromIndex; i < toIndex; i++) {
+                    sort[i - fromIndex] = a[i];
+                }
+                sort.sort((a, b) => {
+                    return a > b ? 1 : -1;
+                });
+                for (let i = fromIndex; i < toIndex; i++) {
+                    a[i] = sort[i - fromIndex];
+                }
+            }
+            static rangeCheck(arrayLength, fromIndex, toIndex) {
+                if (fromIndex > toIndex) {
+                    throw new Error("ArrayIndexOutOfBoundsException:fromIndex(" + fromIndex + ") > toIndex(" + toIndex + ")");
+                }
+                if (fromIndex < 0) {
+                    throw new Error('ArrayIndexOutOfBoundsException:' + fromIndex);
+                }
+                if (toIndex > arrayLength) {
+                    throw new Error('ArrayIndexOutOfBoundsException:' + toIndex);
+                }
+            }
+            static asList(array) {
+                let list = new util.ArrayList();
+                list.array.push(...array);
+                return list;
+            }
+            static equals(a, a2) {
+                if (a == a2)
+                    return true;
+                if (a == null || a2 == null)
+                    return false;
+                let length = a.length;
+                if (a2.length != length)
+                    return false;
+                for (let i = 0; i < length; i++) {
+                    if (a[i] != a2[i])
+                        return false;
+                }
+                return true;
+            }
+        }
+        util.Arrays = Arrays;
+    })(util = java.util || (java.util = {}));
+})(java || (java = {}));
 var androidui;
 (function (androidui) {
     var attr;
@@ -5532,7 +5586,7 @@ var androidui;
         class StateAttr {
             constructor(state) {
                 this.attributes = new Map();
-                this.stateSpec = state.sort();
+                this.stateSpec = state.concat().sort();
             }
             setAttr(name, value) {
                 this.attributes.set(name, value);
@@ -5548,15 +5602,18 @@ var androidui;
                     this.attributes.set(key, value);
                 }
             }
+            isDefaultState() {
+                return this.stateSpec.length === 0;
+            }
             isStateEquals(state) {
                 if (!state)
                     return false;
-                return this.stateSpec + '' === state.sort() + '';
+                return java.util.Arrays.equals(this.stateSpec, state.sort());
             }
             isStateMatch(state) {
                 return android.util.StateSet.stateSetMatches(this.stateSpec, state);
             }
-            mergeRemovedFrom(another) {
+            createDiffKeyAsNullValueAttrMap(another) {
                 if (!another)
                     return this.attributes;
                 let removed = new Map(another.attributes);
@@ -5597,10 +5654,10 @@ var androidui;
     (function (attr_1) {
         class StateAttrList {
             constructor(view) {
-                this.list = new Array(0);
-                this.match_list = new Array(0);
+                this.list = [];
+                this.matchedAttrCache = [];
                 this.mView = view;
-                this.list.push(new attr_1.StateAttr([]));
+                this.optStateAttr([]);
                 this._initStyleAttributes(view.bindElement, []);
             }
             _initStyleAttributes(ele, inParseState) {
@@ -5624,7 +5681,6 @@ var androidui;
                         this._initStyleAttr(attr, ele, inParseState);
                     }
                 });
-                this.list_reverse = this.list.concat().reverse();
             }
             _initStyleAttr(attr, ele, inParseState) {
                 let attrName = attr.name;
@@ -5636,8 +5692,10 @@ var androidui;
                 let attrValue = attr.value;
                 if (attrName.startsWith('state_')) {
                     let newStateSet = attr_1.StateAttr.parseStateAttrName(attrName);
-                    inParseState = inParseState.concat(Array.from(newStateSet));
-                    inParseState = Array.from(new Set(inParseState)).sort();
+                    for (let state of inParseState) {
+                        newStateSet.add(state);
+                    }
+                    inParseState = Array.from(newStateSet).sort();
                 }
                 let _stateAttr = this.optStateAttr(inParseState);
                 if (attrName.startsWith('state_') || attrName === 'style') {
@@ -5661,7 +5719,10 @@ var androidui;
                 }
             }
             getDefaultStateAttr() {
-                return this.getStateAttr(StateAttrList.EmptyArray);
+                for (let stateAttr of this.list) {
+                    if (stateAttr.isDefaultState())
+                        return stateAttr;
+                }
             }
             getStateAttr(state) {
                 for (let stateAttr of this.list) {
@@ -5673,25 +5734,37 @@ var androidui;
                 let stateAttr = this.getStateAttr(state);
                 if (!stateAttr) {
                     stateAttr = new attr_1.StateAttr(state);
-                    this.list.splice(0, 0, stateAttr);
+                    this.list.push(stateAttr);
                 }
                 return stateAttr;
             }
-            getMatchedAttr(state) {
-                for (let stateAttr of this.match_list) {
+            getMatchedStateAttr(state) {
+                if (state == null)
+                    return null;
+                for (let stateAttr of this.matchedAttrCache) {
                     if (stateAttr.isStateEquals(state))
                         return stateAttr;
                 }
                 let matchedAttr = new attr_1.StateAttr(state);
-                for (let stateAttr of this.list_reverse) {
-                    if (stateAttr.isStateMatch(state))
+                for (let stateAttr of this.list) {
+                    if (stateAttr.isDefaultState())
+                        continue;
+                    if (stateAttr.isStateMatch(state)) {
                         matchedAttr.putAll(stateAttr);
+                    }
                 }
-                this.match_list.push(matchedAttr);
+                this.matchedAttrCache.push(matchedAttr);
                 return matchedAttr;
             }
+            removeAttrAllState(attrName) {
+                for (let stateAttr of this.list) {
+                    stateAttr.getAttrMap().delete(attrName);
+                }
+                for (let stateAttr of this.matchedAttrCache) {
+                    stateAttr.getAttrMap().delete(attrName);
+                }
+            }
         }
-        StateAttrList.EmptyArray = [];
         attr_1.StateAttrList = StateAttrList;
     })(attr = androidui.attr || (androidui.attr = {}));
 })(androidui || (androidui = {}));
@@ -5733,7 +5806,7 @@ var androidui;
             }
             getAttrValue(attrName) {
                 if (!attrName)
-                    return null;
+                    return undefined;
                 attrName = attrName.toLowerCase();
                 let getAttrCall = this.attrStashMap.get(attrName);
                 if (getAttrCall) {
@@ -5748,7 +5821,7 @@ var androidui;
                         return value;
                     return this.setRefObject(value);
                 }
-                return null;
+                return undefined;
             }
             getRefObject(ref) {
                 if (ref && ref.startsWith('@ref/')) {
@@ -5862,6 +5935,8 @@ var androidui;
                     return null;
                 if (value instanceof ColorStateList)
                     return value;
+                if (typeof value == 'number')
+                    return ColorStateList.valueOf(value);
                 if (value.startsWith('@')) {
                     let refObj = this.getRefObject(value);
                     if (refObj)
@@ -6160,12 +6235,25 @@ var androidui;
         }
     })(image = androidui.image || (androidui.image = {}));
 })(androidui || (androidui = {}));
+var androidui;
+(function (androidui) {
+    var util;
+    (function (util) {
+        class Platform {
+        }
+        Platform.isIOS = navigator.userAgent.match(/(iPhone|iPad|iPod|ios)/i) ? true : false;
+        Platform.isAndroid = navigator.userAgent.match('Android') ? true : false;
+        Platform.isWeChat = navigator.userAgent.match(/MicroMessenger/i) ? true : false;
+        util.Platform = Platform;
+    })(util = androidui.util || (androidui.util = {}));
+})(androidui || (androidui = {}));
 var android;
 (function (android) {
     var view;
     (function (view) {
         var SystemClock = android.os.SystemClock;
         var Log = android.util.Log;
+        var Platform = androidui.util.Platform;
         const DEBUG = false;
         const TAG = "KeyEvent";
         class KeyEvent {
@@ -6187,7 +6275,35 @@ var android;
                 this.mShiftKey = keyEvent.shiftKey;
                 this.mCtrlKey = keyEvent.ctrlKey;
                 this.mMetaKey = keyEvent.metaKey;
-                this.mIsTypingKey = (keyEvent['keyIdentifier'] + '').startsWith('U+');
+                let keyIdentifier = keyEvent['keyIdentifier'] + '';
+                if (keyIdentifier) {
+                    this.mIsTypingKey = keyIdentifier.startsWith('U+');
+                    if (this.mIsTypingKey) {
+                        this.mKeyCode = Number.parseInt(keyIdentifier.substr(2), 16);
+                    }
+                }
+                if (this.mKeyCode >= KeyEvent.KEYCODE_Key_a && this.mKeyCode <= KeyEvent.KEYCODE_Key_z
+                    && this.mShiftKey && !this.mCtrlKey && !this.mAltKey && !this.mMetaKey) {
+                    this.mKeyCode -= 32;
+                }
+                if (this.mKeyCode >= KeyEvent.KEYCODE_KeyA && this.mKeyCode <= KeyEvent.KEYCODE_KeyZ
+                    && !this.mShiftKey && !this.mCtrlKey && !this.mAltKey && !this.mMetaKey) {
+                    this.mKeyCode += 32;
+                }
+                if (Platform.isAndroid) {
+                    if (!this.mShiftKey && !this.mCtrlKey && !this.mAltKey && !this.mMetaKey) {
+                        this.mKeyCode = KeyEvent.KEYCODE_CHANGE_ANDROID_CHROME.noMeta[this.mKeyCode] || this.mKeyCode;
+                    }
+                    else if (this.mShiftKey && !this.mCtrlKey && !this.mAltKey && !this.mMetaKey) {
+                        this.mKeyCode = KeyEvent.KEYCODE_CHANGE_ANDROID_CHROME.shift[this.mKeyCode] || this.mKeyCode;
+                    }
+                    else if (!this.mShiftKey && this.mCtrlKey && !this.mAltKey && !this.mMetaKey) {
+                        this.mKeyCode = KeyEvent.KEYCODE_CHANGE_ANDROID_CHROME.ctrl[this.mKeyCode] || this.mKeyCode;
+                    }
+                    else if (!this.mShiftKey && !this.mCtrlKey && this.mAltKey && !this.mMetaKey) {
+                        this.mKeyCode = KeyEvent.KEYCODE_CHANGE_ANDROID_CHROME.alt[this.mKeyCode] || this.mKeyCode;
+                    }
+                }
                 if (action === KeyEvent.ACTION_DOWN) {
                     this.mDownTime = SystemClock.uptimeMillis();
                     let keyEvents = this._downingKeyEventMap.get(keyEvent.keyCode);
@@ -6346,14 +6462,139 @@ var android;
         KeyEvent.KEYCODE_TAB = 9;
         KeyEvent.KEYCODE_SPACE = 32;
         KeyEvent.KEYCODE_ESCAPE = 27;
+        KeyEvent.KEYCODE_Backspace = 8;
         KeyEvent.KEYCODE_PAGE_UP = 33;
         KeyEvent.KEYCODE_PAGE_DOWN = 34;
         KeyEvent.KEYCODE_MOVE_HOME = 36;
         KeyEvent.KEYCODE_MOVE_END = 35;
+        KeyEvent.KEYCODE_Digit0 = 48;
+        KeyEvent.KEYCODE_Digit1 = 49;
+        KeyEvent.KEYCODE_Digit2 = 50;
+        KeyEvent.KEYCODE_Digit3 = 51;
+        KeyEvent.KEYCODE_Digit4 = 52;
+        KeyEvent.KEYCODE_Digit5 = 53;
+        KeyEvent.KEYCODE_Digit6 = 54;
+        KeyEvent.KEYCODE_Digit7 = 55;
+        KeyEvent.KEYCODE_Digit8 = 56;
+        KeyEvent.KEYCODE_Digit9 = 57;
+        KeyEvent.KEYCODE_Key_a = 65;
+        KeyEvent.KEYCODE_Key_b = 66;
+        KeyEvent.KEYCODE_Key_c = 67;
+        KeyEvent.KEYCODE_Key_d = 68;
+        KeyEvent.KEYCODE_Key_e = 69;
+        KeyEvent.KEYCODE_Key_f = 70;
+        KeyEvent.KEYCODE_Key_g = 71;
+        KeyEvent.KEYCODE_Key_h = 72;
+        KeyEvent.KEYCODE_Key_i = 73;
+        KeyEvent.KEYCODE_Key_j = 74;
+        KeyEvent.KEYCODE_Key_k = 75;
+        KeyEvent.KEYCODE_Key_l = 76;
+        KeyEvent.KEYCODE_Key_m = 77;
+        KeyEvent.KEYCODE_Key_n = 78;
+        KeyEvent.KEYCODE_Key_o = 79;
+        KeyEvent.KEYCODE_Key_p = 80;
+        KeyEvent.KEYCODE_Key_q = 81;
+        KeyEvent.KEYCODE_Key_r = 82;
+        KeyEvent.KEYCODE_Key_s = 83;
+        KeyEvent.KEYCODE_Key_t = 84;
+        KeyEvent.KEYCODE_Key_u = 85;
+        KeyEvent.KEYCODE_Key_v = 86;
+        KeyEvent.KEYCODE_Key_w = 87;
+        KeyEvent.KEYCODE_Key_x = 88;
+        KeyEvent.KEYCODE_Key_y = 89;
+        KeyEvent.KEYCODE_Key_z = 90;
+        KeyEvent.KEYCODE_KeyA = 0x41;
+        KeyEvent.KEYCODE_KeyB = 0x42;
+        KeyEvent.KEYCODE_KeyC = 0x43;
+        KeyEvent.KEYCODE_KeyD = 0x44;
+        KeyEvent.KEYCODE_KeyE = 0x45;
+        KeyEvent.KEYCODE_KeyF = 0x46;
+        KeyEvent.KEYCODE_KeyG = 0x47;
+        KeyEvent.KEYCODE_KeyH = 0x48;
+        KeyEvent.KEYCODE_KeyI = 0x49;
+        KeyEvent.KEYCODE_KeyJ = 0x4a;
+        KeyEvent.KEYCODE_KeyK = 0x4b;
+        KeyEvent.KEYCODE_KeyL = 0x4c;
+        KeyEvent.KEYCODE_KeyM = 0x4d;
+        KeyEvent.KEYCODE_KeyN = 0x4e;
+        KeyEvent.KEYCODE_KeyO = 0x4f;
+        KeyEvent.KEYCODE_KeyP = 0x50;
+        KeyEvent.KEYCODE_KeyQ = 0x51;
+        KeyEvent.KEYCODE_KeyR = 0x52;
+        KeyEvent.KEYCODE_KeyS = 0x53;
+        KeyEvent.KEYCODE_KeyT = 0x54;
+        KeyEvent.KEYCODE_KeyU = 0x55;
+        KeyEvent.KEYCODE_KeyV = 0x56;
+        KeyEvent.KEYCODE_KeyW = 0x57;
+        KeyEvent.KEYCODE_KeyX = 0x58;
+        KeyEvent.KEYCODE_KeyY = 0x59;
+        KeyEvent.KEYCODE_KeyZ = 0x5a;
+        KeyEvent.KEYCODE_Semicolon = 0x3b;
+        KeyEvent.KEYCODE_LessThan = 0x3c;
+        KeyEvent.KEYCODE_Equal = 0x3d;
+        KeyEvent.KEYCODE_MoreThan = 0x3e;
+        KeyEvent.KEYCODE_Question = 0x3f;
+        KeyEvent.KEYCODE_Comma = 0x2c;
+        KeyEvent.KEYCODE_Period = 0x2e;
+        KeyEvent.KEYCODE_Slash = 0x2f;
+        KeyEvent.KEYCODE_Quotation = 0x27;
+        KeyEvent.KEYCODE_LeftBracket = 0x5b;
+        KeyEvent.KEYCODE_Backslash = 0x5c;
+        KeyEvent.KEYCODE_RightBracket = 0x5d;
+        KeyEvent.KEYCODE_Minus = 0x2d;
+        KeyEvent.KEYCODE_Colon = 0x3a;
+        KeyEvent.KEYCODE_Double_Quotation = 0x22;
+        KeyEvent.KEYCODE_Backquote = 0x60;
+        KeyEvent.KEYCODE_Tilde = 0x7e;
+        KeyEvent.KEYCODE_Left_Brace = 0x7b;
+        KeyEvent.KEYCODE_Or = 0x7c;
+        KeyEvent.KEYCODE_Right_Brace = 0x7d;
+        KeyEvent.KEYCODE_Del = 0x7f;
+        KeyEvent.KEYCODE_Exclamation = 0x21;
+        KeyEvent.KEYCODE_Right_Parenthesis = 0x29;
+        KeyEvent.KEYCODE_AT = 0x40;
+        KeyEvent.KEYCODE_Sharp = 0x23;
+        KeyEvent.KEYCODE_Dollar = 0x24;
+        KeyEvent.KEYCODE_Percent = 0x25;
+        KeyEvent.KEYCODE_Power = 0x5e;
+        KeyEvent.KEYCODE_And = 0x26;
+        KeyEvent.KEYCODE_Asterisk = 0x2a;
+        KeyEvent.KEYCODE_Left_Parenthesis = 0x28;
+        KeyEvent.KEYCODE_Underline = 0x5f;
+        KeyEvent.KEYCODE_Add = 0x2b;
         KeyEvent.KEYCODE_BACK = -1;
         KeyEvent.KEYCODE_MENU = -2;
+        KeyEvent.KEYCODE_CHANGE_ANDROID_CHROME = {
+            noMeta: {
+                186: KeyEvent.KEYCODE_Semicolon,
+                187: KeyEvent.KEYCODE_Equal,
+                188: KeyEvent.KEYCODE_Comma,
+                189: KeyEvent.KEYCODE_Minus,
+                190: KeyEvent.KEYCODE_Period,
+                191: KeyEvent.KEYCODE_Slash,
+                192: KeyEvent.KEYCODE_Quotation,
+                219: KeyEvent.KEYCODE_LeftBracket,
+                220: KeyEvent.KEYCODE_Backslash,
+                221: KeyEvent.KEYCODE_RightBracket,
+            },
+            shift: {
+                186: KeyEvent.KEYCODE_Colon,
+                187: KeyEvent.KEYCODE_Add,
+                188: KeyEvent.KEYCODE_LessThan,
+                189: KeyEvent.KEYCODE_Underline,
+                190: KeyEvent.KEYCODE_MoreThan,
+                191: KeyEvent.KEYCODE_Question,
+                192: KeyEvent.KEYCODE_Double_Quotation,
+                219: KeyEvent.KEYCODE_Left_Brace,
+                220: KeyEvent.KEYCODE_Or,
+                221: KeyEvent.KEYCODE_Right_Brace,
+            },
+            ctrl: {},
+            alt: {}
+        };
         KeyEvent.ACTION_DOWN = 0;
         KeyEvent.ACTION_UP = 1;
+        KeyEvent.META_MASK_SHIFT = 16;
         KeyEvent.META_ALT_ON = 0x02;
         KeyEvent.META_SHIFT_ON = 0x1;
         KeyEvent.META_CTRL_ON = 0x1000;
@@ -8132,6 +8373,12 @@ var android;
                 stateList.addState([], R.image.btn_default_disabled_holo_light);
                 return stateList;
             }
+            static get editbox_background() {
+                let stateList = new StateListDrawable();
+                stateList.addState([View.VIEW_STATE_FOCUSED], R.image.editbox_background_focus_yellow);
+                stateList.addState([], R.image.editbox_background_normal);
+                return stateList;
+            }
             static get btn_check() {
                 let stateList = new StateListDrawable();
                 stateList.addState([View.VIEW_STATE_CHECKED, -View.VIEW_STATE_WINDOW_FOCUSED, View.VIEW_STATE_ENABLED], R.image.btn_check_on_holo_light);
@@ -8979,6 +9226,16 @@ var android;
                 null,
                 "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEcAAAA2CAMAAACiEHRJAAAAflBMVEVAQEAAAABBQUEAAAAAAAATExMlJSU+Pj5BQUEAAAAAAAA4ODggICAvLy8WFhYAAAAAAAAAAAAAAAAfHx8NDQ0AAAAvLy8kJCQgICAQEBAAAAA3NzcWFhYkJCQXFxcAAAASEhIAAAAjIyMAAAAwMDAjIyMAAAAAAAAAAAAAAACu+DqjAAAAKXRSTlPmCekADkqr4e4qFcCA2KhEYwUShjwb1K5/Nge9pZ2YXUxALSTIrGZVSewvjJ0AAAC8SURBVEjH7da3EsIwEEVRr5AjJig4Z5uk//9BJNFBw+zQMLO339Ns84Lde+abPq6cs6q6rnN0avWOAD10e3zdoEFYB/hcsQQfq2YO3gmjmAXYWByFHAw55JBDDjk/dgw5f/UvcsghhxyUEyQMm3f8nofweinL8oCtCsE5LTS5Gsf+iKxXDbTWETzb9OM+nXHdpjTjwjkgi7TRywnZUkhwjoeKLUXnGOs4iEuZoQPhHQeJFvBZxTk+g+8FPAE5Rz/0d6kkJAAAAABJRU5ErkJggg=="
             ],
+            "editbox_background_focus_yellow": [
+                null,
+                null,
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGoAAAA3CAMAAADT7y+MAAACBFBMVEUAAAD/rgD/rgD/sAD/tgB1TABzSgD/rgD/rgD/rgD/rwCGWAB7TwD/tgD/sAD/rgD/rwD/rgD/rgD/rgD/rgD/rgD/rgD/rgD/rgD/sQD/rwD/rgD/rgD/sQD/sgD/rgD/rgD/sAD/sQD/sAD/rgBxSQD/tQD/rgClbwOvdQD/twD/tQD/sgD/rgBzTQF6TwDRjgDBgwD/rwD/twD/twD/twD5qgD/uAD/vQD/rwCDVQB9UQCLXADJigDblwD/uAD2pwD/ugD/rgCVZg+GWgN0TACtdAKOXgCSYQC2ewDnnQD/uQD/uQD/sAD/rgBrSAB4UAGrdASRYACocQDLigDdlgDVkgDhmQD6qgD///8AAAD//Pj/6cx/Yjb88eR1WS/sx53/9Ob03sT/3q//8+T/+/b/58mDYi92WSv90qL/6s3/2qr/+vT/8uH//v3/+O7/+fH+797/5ML+0Jr5zJX//fr/4Lv/2KjuxJOPZB7/6cqEXBv/7tr+6tP03sP03L7/3q381qn/1qLhrW3XpGapfEB0WCyFYCj/8uP+8OD/5L3sxpn3x47twY3OnWGAYDFzVCWBWRiRYw3/7dj87Nf75cr/47v727f51Kfnu4bIml+zhEZ3VydxUBx8Vhp4VBeJXhSaaA3/3rjz1rTz1bLuzKPty6HPomrAlFu9kFe7ikmjdz0LoYhyAAAAWXRSTlMAETRqtO3tMQ4CNu3rrmZsuQcJFgUPDR4LYkQlIl9ZLwNlW04r6qwc69Gld1RJ/ObMwrawnIqKfXg55+TevaugkIEU/vzm49/ezaaQjT8d+/rr2c/CsLCtkDTYHfEAAAMuSURBVFjD7ZhXW9pQAIYxtk1CK20ISdgoQ1DBUfceVevuHirdiK2CTJGhDFnuvbfd408WRPtg27seqBe8+QHvc3Jxzvd9tL/R96/QLgpoJgtjshGCINLAQBAIm4mxMtHfRSwmgvfwpDAMAQOGpTwKJ5jnZShG4jyIKxFzGOnAYHDESi7Ew0kMjTelUbCKk9dVn118CRjF2fWd5RwVTKVhaJyJXylsfJJT0yK7DBBZS03Oo0ZhZZyLhVCVgqdFihXXXij0Ahih0J5rRVHUIKikSNbpoZg4JGwozN//sbBtn519CYpZ+/aX4EF+YYMQxpmxY2USPFXjwzuub/OfP3o8bvdrILjdHs+HT/M7jvyichUPialYOJ3zWHH41b65vmaafg6MadPa+qZ950BRx4Hw2B9k8rnlD4527baJKYNuoB8YAzqDZsJmD97KyeP2YDEVT9JZc+jfUk/pRntBMjKq06i3Ake3SyV8ZvRqpZEiQW7VknVj3BAxgWXUMG6bD1eXiKVsWl/kI2BOdtWSxWwyjoBWjRhNZutgQa5ARJ6o0qD0m1ffTmr1ul7g6PRmy+C17CwYiano1yOqMWciVAMa7bvBaxlxqhsRlVozkCzVUAJVjHOq4ZQqpUqpUqqUKqVKqf7TKzymnkpGjElPWmKCGAnMgdr4HIgkL92SUnF99b7FtmoYjbnAZva5cEGJMJrZY02k6/6y3+fUG/uBukb6jXq1z+84bSJRFcWtyFn5bp2Z0BiMOnD16qRfzVh2o/1Kjp22RkhQd8+1YN1Qr5r0mldg0Gj00+NDM5bAsqJOADexYl0Y4anKa/MdC1bfe7PWqQaEU2u2+awBx92iCi6fRM8aPqwsK2xeDgbmJoe93jdA8HqHJ+f8QVdzYZlShJ8NFyySoovLaluPHeHFxWfgWAw7jltry4R0OTvz1xpDUHRlRUd7W7VMdgUYMllBW3tHhRKikPjlB5GLuOK80pLcjGJgE1NGbklpnpgrkkdM8RsdG+fD3RKhIIsBcDkTSrphPs7G0PPDI8ZukvOlIpB7oEjKlzeR2J/jIxpdOUkE3MqJkNGVE0VpF4TELNI/AVOh3l08hzvaAAAAAElFTkSuQmCC"
+            ],
+            "editbox_background_normal": [
+                null,
+                null,
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGoAAAA3CAMAAADT7y+MAAAA0lBMVEUAAAAAAACzs7Oenp7+/v6xsbGmpqYAAAAAAAAAAAAAAAAAAAD9/f36+vqvr6/+/v6Xl5fw8PBUVFTs7OypqampqamEhIQdHR3c3Nzz8/Pd3d3x8fHu7u7S0tLHx8fa2tqenp6+vr6ampqioqKgoKCBgYGSkpIAAAA3NzdSUlIAAAD39/fr6+v39/f09PTo6Ojb29vX19fk5OTf39+srKycnJympqaSkpKMjIyUlJSPj48sLCxoaGhqamoAAAD///8AAAD8/Pzz8/Pm5ub39/fl5eUurhQ7AAAAP3RSTlMAEX19/nZzGAIGCQ34/nT7avwk+GpiTCvn2tfTy7i1qX53cXBjRkMlJB8V+Ozi39/MzLezgXl4aV5ZSSgjIhntDpQOAAABGklEQVRYw+3Yx27CQBCAYTtskm3ujd5DgPTeszGB93+lHIwi2cvFYofT/C/waS4jzVi7+tk3C8PqR7mwDSc43QWxMPWfhg2DDRt+GjKqj/Tx0m9ufo22afbHmTYYO3++i4KV4YKo/ZixihT6t9HayQ3nrIP2OCyPxc96QU6U8Ui+6qW8RInXS0eB5NxMxRYpVqPtA0mKXLh2AW2p5SRXQDkV6vSEKKDy4yqloCJIIYUUUkghhRRSSNWkvg9HLScKKs8tU8JXUMl/qki8XREFknediMp9dS8VTA/vvETRr7gLYslO/Emrt/CoKz3TkCc7o4xpF/58OmhJw1JrEM851f8Wi1niHhnNTWaLYiYNM/+NYdTCsBpBfqT/AK7giup/9WGpAAAAAElFTkSuQmCC"
+            ],
             "ic_menu_moreoverflow_normal_holo_dark": [
                 null,
                 null,
@@ -9130,6 +9387,8 @@ var android;
             btn_rating_star_on_normal_holo_light: null,
             btn_rating_star_on_pressed_holo_light: null,
             dropdown_background_dark: null,
+            editbox_background_focus_yellow: null,
+            editbox_background_normal: null,
             ic_menu_moreoverflow_normal_holo_dark: null,
             menu_panel_holo_dark: null,
             menu_panel_holo_light: null,
@@ -9255,6 +9514,12 @@ var android;
             static get dropdown_background_dark() {
                 return imageCache.dropdown_background_dark || (imageCache.dropdown_background_dark = findRatioImage(data.dropdown_background_dark));
             }
+            static get editbox_background_focus_yellow() {
+                return imageCache.editbox_background_focus_yellow || (imageCache.editbox_background_focus_yellow = findRatioImage(data.editbox_background_focus_yellow));
+            }
+            static get editbox_background_normal() {
+                return imageCache.editbox_background_normal || (imageCache.editbox_background_normal = findRatioImage(data.editbox_background_normal));
+            }
             static get ic_menu_moreoverflow_normal_holo_dark() {
                 return imageCache.ic_menu_moreoverflow_normal_holo_dark || (imageCache.ic_menu_moreoverflow_normal_holo_dark = findRatioImage(data.ic_menu_moreoverflow_normal_holo_dark));
             }
@@ -9359,6 +9624,8 @@ var android;
             static get btn_rating_star_on_normal_holo_light() { return new NetDrawable(R.image_base64.btn_rating_star_on_normal_holo_light); }
             static get btn_rating_star_on_pressed_holo_light() { return new NetDrawable(R.image_base64.btn_rating_star_on_pressed_holo_light); }
             static get dropdown_background_dark() { return new NinePatchDrawable(R.image_base64.dropdown_background_dark); }
+            static get editbox_background_focus_yellow() { return new NinePatchDrawable(R.image_base64.editbox_background_focus_yellow); }
+            static get editbox_background_normal() { return new NinePatchDrawable(R.image_base64.editbox_background_normal); }
             static get ic_menu_moreoverflow_normal_holo_dark() { return new NetDrawable(R.image_base64.ic_menu_moreoverflow_normal_holo_dark); }
             static get menu_panel_holo_dark() { return new NinePatchDrawable(R.image_base64.menu_panel_holo_dark); }
             static get menu_panel_holo_light() { return new NinePatchDrawable(R.image_base64.menu_panel_holo_light); }
@@ -10419,7 +10686,8 @@ var android;
                 return {
                     textSize: '14sp',
                     layerType: 'software',
-                    textColor: R.color.textView_textColor
+                    textColor: R.color.textView_textColor,
+                    textColorHint: 0xff808080
                 };
             }
             static get buttonStyle() {
@@ -10431,6 +10699,16 @@ var android;
                     minWidth: '64dp',
                     textSize: '18sp',
                     gravity: Gravity.CENTER
+                });
+            }
+            static get editTextStyle() {
+                return Object.assign(attr.textViewStyle, {
+                    background: R.drawable.editbox_background,
+                    focusable: true,
+                    focusableInTouchMode: true,
+                    clickable: true,
+                    textSize: '18sp',
+                    gravity: Gravity.CENTER_VERTICAL
                 });
             }
             static get imageButtonStyle() {
@@ -10644,7 +10922,6 @@ var android;
         var RoundRectDrawable = android.graphics.drawable.RoundRectDrawable;
         var PixelFormat = android.graphics.PixelFormat;
         var Matrix = android.graphics.Matrix;
-        var Color = android.graphics.Color;
         var Paint = android.graphics.Paint;
         var StringBuilder = java.lang.StringBuilder;
         var JavaObject = java.lang.JavaObject;
@@ -10758,43 +11035,54 @@ var android;
                 a.addAttr('background', (value) => {
                     this.setBackground(a.parseDrawable(value));
                 }, () => {
-                    if (this.mBackground instanceof ColorDrawable) {
-                        return Color.toRGBAFunc(this.mBackground.getColor());
-                    }
                     return this.mBackground;
                 });
                 a.addAttr('padding', (value) => {
+                    if (value == null)
+                        value = 0;
                     let [left, top, right, bottom] = a.parsePaddingMarginLTRB(value);
                     this._setPaddingWithUnit(left, top, right, bottom);
                 }, () => {
                     return this.mPaddingTop + ' ' + this.mPaddingRight + ' ' + this.mPaddingBottom + ' ' + this.mPaddingLeft;
                 }),
                     a.addAttr('paddingLeft', (value) => {
+                        if (value == null)
+                            value = 0;
                         this._setPaddingWithUnit(value, this.mPaddingTop, this.mPaddingRight, this.mPaddingBottom);
                     }, () => {
                         return this.mPaddingLeft;
                     }),
                     a.addAttr('paddingStart', (value) => {
+                        if (value == null)
+                            value = 0;
                         this._setPaddingWithUnit(value, this.mPaddingTop, this.mPaddingRight, this.mPaddingBottom);
                     }, () => {
                         return this.mPaddingLeft;
                     }),
                     a.addAttr('paddingTop', (value) => {
+                        if (value == null)
+                            value = 0;
                         this._setPaddingWithUnit(this.mPaddingLeft, value, this.mPaddingRight, this.mPaddingBottom);
                     }, () => {
                         return this.mPaddingTop;
                     }),
                     a.addAttr('paddingRight', (value) => {
+                        if (value == null)
+                            value = 0;
                         this._setPaddingWithUnit(this.mPaddingLeft, this.mPaddingTop, value, this.mPaddingBottom);
                     }, () => {
                         return this.mPaddingRight;
                     }),
                     a.addAttr('paddingEnd', (value) => {
+                        if (value == null)
+                            value = 0;
                         this._setPaddingWithUnit(this.mPaddingLeft, this.mPaddingTop, value, this.mPaddingBottom);
                     }, () => {
                         return this.mPaddingRight;
                     }),
                     a.addAttr('paddingBottom', (value) => {
+                        if (value == null)
+                            value = 0;
                         this._setPaddingWithUnit(this.mPaddingLeft, this.mPaddingTop, this.mPaddingRight, value);
                     }, () => {
                         return this.mPaddingBottom;
@@ -10803,39 +11091,59 @@ var android;
                         value = Number.parseInt(value);
                         if (Number.isInteger(value))
                             this.scrollTo(value, this.mScrollY);
+                    }, () => {
+                        return this.getScrollX();
                     }),
                     a.addAttr('scrollY', (value) => {
                         value = Number.parseInt(value);
                         if (Number.isInteger(value))
                             this.scrollTo(this.mScrollX, value);
+                    }, () => {
+                        return this.getScrollY();
                     }),
                     a.addAttr('alpha', (value) => {
-                        this.setAlpha(a.parseNumber(value));
+                        this.setAlpha(a.parseNumber(value, this.getAlpha()));
+                    }, () => {
+                        return this.getAlpha();
                     }),
                     a.addAttr('transformPivotX', (value) => {
-                        this.setPivotX(a.parseNumber(value, 0));
+                        this.setPivotX(a.parseNumber(value, this.getPivotX()));
+                    }, () => {
+                        return this.getPivotX();
                     }),
                     a.addAttr('transformPivotY', (value) => {
-                        this.setPivotY(a.parseNumber(value, 0));
+                        this.setPivotY(a.parseNumber(value, this.getPivotY()));
+                    }, () => {
+                        return this.getPivotY();
                     }),
                     a.addAttr('translationX', (value) => {
-                        this.setTranslationX(a.parseNumber(value, 0));
+                        this.setTranslationX(a.parseNumber(value, this.getTranslationX()));
+                    }, () => {
+                        return this.getTranslationX();
                     }),
                     a.addAttr('translationY', (value) => {
-                        this.setTranslationY(a.parseNumber(value, 0));
+                        this.setTranslationY(a.parseNumber(value, this.getTranslationY()));
+                    }, () => {
+                        return this.getTranslationY();
                     }),
                     a.addAttr('rotation', (value) => {
-                        this.setRotation(a.parseNumber(value, 0));
+                        this.setRotation(a.parseNumber(value, this.getRotation()));
+                    }, () => {
+                        return this.getRotation();
                     }),
                     a.addAttr('rotationX', (value) => {
                     }),
                     a.addAttr('rotationY', (value) => {
                     }),
                     a.addAttr('scaleX', (value) => {
-                        this.setScaleX(a.parseNumber(value, 1));
+                        this.setScaleX(a.parseNumber(value, this.getScaleX()));
+                    }, () => {
+                        return this.getScaleX();
                     }),
                     a.addAttr('scaleY', (value) => {
-                        this.setScaleY(a.parseNumber(value, 1));
+                        this.setScaleY(a.parseNumber(value, this.getScaleY()));
+                    }, () => {
+                        return this.getScaleY();
                     }),
                     a.addAttr('tag', (value) => {
                         this.setTag(value);
@@ -10847,21 +11155,29 @@ var android;
                         if (a.parseBoolean(value, false)) {
                             this.setFlags(View.FOCUSABLE, View.FOCUSABLE_MASK);
                         }
+                    }, () => {
+                        return this.isFocusable();
                     }),
                     a.addAttr('focusableInTouchMode', (value) => {
                         if (a.parseBoolean(value, false)) {
                             this.setFlags(View.FOCUSABLE_IN_TOUCH_MODE | View.FOCUSABLE, View.FOCUSABLE_IN_TOUCH_MODE | View.FOCUSABLE_MASK);
                         }
+                    }, () => {
+                        return this.isFocusableInTouchMode();
                     }),
                     a.addAttr('clickable', (value) => {
                         if (a.parseBoolean(value, false)) {
                             this.setFlags(View.CLICKABLE, View.CLICKABLE);
                         }
+                    }, () => {
+                        return this.isClickable();
                     }),
                     a.addAttr('longClickable', (value) => {
                         if (a.parseBoolean(value, false)) {
                             this.setFlags(View.LONG_CLICKABLE, View.LONG_CLICKABLE);
                         }
+                    }, () => {
+                        return this.isLongClickable();
                     }),
                     a.addAttr('saveEnabled', (value) => {
                         if (a.parseBoolean(value, false)) {
@@ -10879,6 +11195,8 @@ var android;
                             this.setVisibility(View.INVISIBLE);
                         else if (value === 'visible')
                             this.setVisibility(View.VISIBLE);
+                    }, () => {
+                        return this.getVisibility();
                     }),
                     a.addAttr('scrollbars', (value) => {
                         if (value === 'none') {
@@ -14403,49 +14721,33 @@ var android;
                 rootView.postDelayed(rootView._syncToElementRun, 1000);
             }
             _syncBoundAndScrollToElement() {
-                this._syncBoundToElement();
-                this._syncScrollToElement();
-                if (this instanceof view_2.ViewGroup) {
-                    const group = this;
-                    for (var i = 0, count = group.getChildCount(); i < count; i++) {
-                        group.getChildAt(i)._syncBoundAndScrollToElement();
-                    }
-                }
-            }
-            _syncBoundToElement() {
                 const left = this.mLeft;
                 const top = this.mTop;
                 const width = this.getWidth();
                 const height = this.getHeight();
+                const parent = this.getParent();
+                const pScrollX = parent instanceof View ? parent.mScrollX : 0;
+                const pScrollY = parent instanceof View ? parent.mScrollY : 0;
                 if (left !== this._lastSyncLeft || top !== this._lastSyncTop
-                    || width !== this._lastSyncWidth || height !== this._lastSyncHeight) {
+                    || width !== this._lastSyncWidth || height !== this._lastSyncHeight
+                    || pScrollX !== this._lastSyncScrollX || pScrollY !== this._lastSyncScrollY) {
                     this._lastSyncLeft = left;
                     this._lastSyncTop = top;
                     this._lastSyncWidth = width;
                     this._lastSyncHeight = height;
+                    this._lastSyncScrollX = pScrollX;
+                    this._lastSyncScrollY = pScrollY;
                     const density = this.getResources().getDisplayMetrics().density;
                     let bind = this.bindElement;
-                    bind.style.transform = bind.style.webkitTransform = `translate(${left / density}px, ${top / density}px)`;
+                    bind.style.left = (left - pScrollX) / density + 'px';
+                    bind.style.top = (top - pScrollY) / density + 'px';
                     bind.style.width = width / density + 'px';
                     bind.style.height = height / density + 'px';
                 }
-            }
-            _syncScrollToElement() {
-                let sx = this.mScrollX;
-                let sy = this.mScrollY;
-                if (this._lastSyncScrollX !== sx || this._lastSyncScrollY !== sy) {
-                    this._lastSyncScrollX = sx;
-                    this._lastSyncScrollY = sy;
-                    if (this instanceof view_2.ViewGroup) {
-                        let group = this;
-                        for (let i = 0, count = group.getChildCount(); i < count; i++) {
-                            let child = group.getChildAt(i);
-                            let item = child.bindElement;
-                            const density = this.getResources().getDisplayMetrics().density;
-                            let tx = (child.mLeft - sx) / density;
-                            let ty = (child.mTop - sy) / density;
-                            item.style.transform = item.style.webkitTransform = `translate(${tx}px, ${ty}px)`;
-                        }
+                if (this instanceof view_2.ViewGroup) {
+                    const group = this;
+                    for (var i = 0, count = group.getChildCount(); i < count; i++) {
+                        group.getChildAt(i)._syncBoundAndScrollToElement();
                     }
                 }
             }
@@ -14516,40 +14818,32 @@ var android;
             _fireStateChangeToAttribute(oldState, newState) {
                 if (!this._stateAttrList)
                     return;
-                if (oldState + '' === newState + '')
+                if (java.util.Arrays.equals(oldState, newState))
                     return;
-                let oldMatchedAttr = oldState ? this._stateAttrList.getMatchedAttr(oldState) : null;
-                let matchedAttr = this._stateAttrList.getMatchedAttr(newState);
-                let attrMap = matchedAttr.mergeRemovedFrom(oldMatchedAttr);
-                for (let [key, value] of attrMap.entries()) {
-                    if (oldMatchedAttr) {
-                        let oldValue;
-                        if (key.startsWith('layout_')) {
-                            let params = this.getLayoutParams();
-                            if (params) {
-                                let attrName = key.substring('layout_'.length);
-                                oldValue = params._attrBinder.getAttrValue(attrName);
-                            }
-                        }
-                        else {
-                            oldValue = this._attrBinder.getAttrValue(key);
-                        }
-                        if (oldValue != null) {
-                            oldMatchedAttr.setAttr(key, oldValue);
-                        }
+                let oldMatchedAttr = this._stateAttrList.getMatchedStateAttr(oldState);
+                let matchedAttr = this._stateAttrList.getMatchedStateAttr(newState);
+                for (let [key, value] of matchedAttr.getAttrMap().entries()) {
+                    let attrValue = this._getBinderAttrValue(key);
+                    if (oldMatchedAttr && attrValue != null) {
+                        oldMatchedAttr.setAttr(key, attrValue);
                     }
-                    key = 'android:' + key;
-                    if ((value === null || value === undefined)) {
-                        if (this.bindElement.hasAttribute(key)) {
-                            this.bindElement.removeAttribute(key);
-                        }
-                        else {
-                            this.onBindElementAttributeChanged(key, null, null);
-                        }
+                    if (value == attrValue)
+                        continue;
+                    this.onBindElementAttributeChanged(key, null, value);
+                }
+            }
+            _getBinderAttrValue(key) {
+                if (!key)
+                    return null;
+                if (key.startsWith('layout_')) {
+                    let params = this.getLayoutParams();
+                    if (params) {
+                        let attrName = key.substring('layout_'.length);
+                        return params._attrBinder.getAttrValue(attrName);
                     }
-                    else {
-                        this.bindElement.setAttribute(key, value);
-                    }
+                }
+                else {
+                    return this._attrBinder.getAttrValue(key);
                 }
             }
             onBindElementAttributeChanged(attributeName, oldVal, newVal) {
@@ -15839,11 +16133,16 @@ var androidui;
             };
         }
         refreshWindowBound() {
-            let rootViewBound = this.androidUIElement.getBoundingClientRect();
-            let boundLeft = rootViewBound.left;
-            let boundTop = rootViewBound.top;
-            let boundRight = rootViewBound.right;
-            let boundBottom = rootViewBound.bottom;
+            let boundLeft = this.androidUIElement.offsetLeft;
+            let boundTop = this.androidUIElement.offsetTop;
+            let parent = this.androidUIElement.parentElement;
+            if (parent) {
+                boundLeft += parent.offsetLeft;
+                boundTop += parent.offsetTop;
+                parent = parent.parentElement;
+            }
+            let boundRight = boundLeft + this.androidUIElement.offsetWidth;
+            let boundBottom = boundTop + this.androidUIElement.offsetHeight;
             if (this._windowBound && this._windowBound.left == boundLeft && this._windowBound.top == boundTop
                 && this._windowBound.right == boundRight && this._windowBound.bottom == boundBottom) {
                 return false;
@@ -15868,7 +16167,9 @@ var androidui;
             this.androidUIElement.addEventListener('touchstart', (e) => {
                 this.touchAvailable = true;
                 this.refreshWindowBound();
-                this.androidUIElement.focus();
+                if (e.target != document.activeElement || !this.androidUIElement.contains(document.activeElement)) {
+                    this.androidUIElement.focus();
+                }
                 this.touchEvent.initWithTouch(e, MotionEvent.ACTION_DOWN, this._windowBound);
                 if (this._viewRootImpl.dispatchInputEvent(this.touchEvent)) {
                     e.stopPropagation();
@@ -17084,7 +17385,7 @@ var android;
                 if (action == view_3.MotionEvent.ACTION_DOWN || action == view_3.MotionEvent.ACTION_SCROLL) {
                     this.ViewRootImpl_this.ensureTouchMode(true);
                 }
-                event.offsetLocation(this.ViewRootImpl_this.mWinFrame.left, this.ViewRootImpl_this.mWinFrame.top);
+                event.offsetLocation(-this.ViewRootImpl_this.mWinFrame.left, -this.ViewRootImpl_this.mWinFrame.top);
                 return InputStage.FORWARD;
             }
         }
@@ -20280,44 +20581,6 @@ var android;
         })(style = text.style || (text.style = {}));
     })(text = android.text || (android.text = {}));
 })(android || (android = {}));
-var java;
-(function (java) {
-    var util;
-    (function (util) {
-        class Arrays {
-            static sort(a, fromIndex, toIndex) {
-                Arrays.rangeCheck(a.length, fromIndex, toIndex);
-                var sort = new Array(toIndex - fromIndex);
-                for (let i = fromIndex; i < toIndex; i++) {
-                    sort[i - fromIndex] = a[i];
-                }
-                sort.sort((a, b) => {
-                    return a > b ? 1 : -1;
-                });
-                for (let i = fromIndex; i < toIndex; i++) {
-                    a[i] = sort[i - fromIndex];
-                }
-            }
-            static rangeCheck(arrayLength, fromIndex, toIndex) {
-                if (fromIndex > toIndex) {
-                    throw new Error("ArrayIndexOutOfBoundsException:fromIndex(" + fromIndex + ") > toIndex(" + toIndex + ")");
-                }
-                if (fromIndex < 0) {
-                    throw new Error('ArrayIndexOutOfBoundsException:' + fromIndex);
-                }
-                if (toIndex > arrayLength) {
-                    throw new Error('ArrayIndexOutOfBoundsException:' + toIndex);
-                }
-            }
-            static asList(array) {
-                let list = new util.ArrayList();
-                list.array.push(...array);
-                return list;
-            }
-        }
-        util.Arrays = Arrays;
-    })(util = java.util || (java.util = {}));
-})(java || (java = {}));
 var android;
 (function (android) {
     var text;
@@ -28201,47 +28464,103 @@ var android;
 (function (android) {
     var text;
     (function (text) {
-        class InputType {
-        }
-        InputType.TYPE_MASK_CLASS = 0x0000000f;
-        InputType.TYPE_MASK_VARIATION = 0x00000ff0;
-        InputType.TYPE_MASK_FLAGS = 0x00fff000;
-        InputType.TYPE_NULL = 0x00000000;
-        InputType.TYPE_CLASS_TEXT = 0x00000001;
-        InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS = 0x00001000;
-        InputType.TYPE_TEXT_FLAG_CAP_WORDS = 0x00002000;
-        InputType.TYPE_TEXT_FLAG_CAP_SENTENCES = 0x00004000;
-        InputType.TYPE_TEXT_FLAG_AUTO_CORRECT = 0x00008000;
-        InputType.TYPE_TEXT_FLAG_AUTO_COMPLETE = 0x00010000;
-        InputType.TYPE_TEXT_FLAG_MULTI_LINE = 0x00020000;
-        InputType.TYPE_TEXT_FLAG_IME_MULTI_LINE = 0x00040000;
-        InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS = 0x00080000;
-        InputType.TYPE_TEXT_VARIATION_NORMAL = 0x00000000;
-        InputType.TYPE_TEXT_VARIATION_URI = 0x00000010;
-        InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS = 0x00000020;
-        InputType.TYPE_TEXT_VARIATION_EMAIL_SUBJECT = 0x00000030;
-        InputType.TYPE_TEXT_VARIATION_SHORT_MESSAGE = 0x00000040;
-        InputType.TYPE_TEXT_VARIATION_LONG_MESSAGE = 0x00000050;
-        InputType.TYPE_TEXT_VARIATION_PERSON_NAME = 0x00000060;
-        InputType.TYPE_TEXT_VARIATION_POSTAL_ADDRESS = 0x00000070;
-        InputType.TYPE_TEXT_VARIATION_PASSWORD = 0x00000080;
-        InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD = 0x00000090;
-        InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT = 0x000000a0;
-        InputType.TYPE_TEXT_VARIATION_FILTER = 0x000000b0;
-        InputType.TYPE_TEXT_VARIATION_PHONETIC = 0x000000c0;
-        InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS = 0x000000d0;
-        InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD = 0x000000e0;
-        InputType.TYPE_CLASS_NUMBER = 0x00000002;
-        InputType.TYPE_NUMBER_FLAG_SIGNED = 0x00001000;
-        InputType.TYPE_NUMBER_FLAG_DECIMAL = 0x00002000;
-        InputType.TYPE_NUMBER_VARIATION_NORMAL = 0x00000000;
-        InputType.TYPE_NUMBER_VARIATION_PASSWORD = 0x00000010;
-        InputType.TYPE_CLASS_PHONE = 0x00000003;
-        InputType.TYPE_CLASS_DATETIME = 0x00000004;
-        InputType.TYPE_DATETIME_VARIATION_NORMAL = 0x00000000;
-        InputType.TYPE_DATETIME_VARIATION_DATE = 0x00000010;
-        InputType.TYPE_DATETIME_VARIATION_TIME = 0x00000020;
-        text.InputType = InputType;
+        var KeyEvent = android.view.KeyEvent;
+        (function (InputType) {
+            InputType[InputType["TYPE_NULL"] = 0] = "TYPE_NULL";
+            InputType[InputType["TYPE_CLASS_TEXT"] = 1] = "TYPE_CLASS_TEXT";
+            InputType[InputType["TYPE_CLASS_URI"] = 2] = "TYPE_CLASS_URI";
+            InputType[InputType["TYPE_CLASS_EMAIL_ADDRESS"] = 3] = "TYPE_CLASS_EMAIL_ADDRESS";
+            InputType[InputType["TYPE_CLASS_NUMBER"] = 4] = "TYPE_CLASS_NUMBER";
+            InputType[InputType["TYPE_CLASS_PHONE"] = 5] = "TYPE_CLASS_PHONE";
+            InputType[InputType["TYPE_PASSWORD"] = 6] = "TYPE_PASSWORD";
+            InputType[InputType["TYPE_TEXT_PASSWORD"] = 7] = "TYPE_TEXT_PASSWORD";
+            InputType[InputType["TYPE_TEXT_VISIBLE_PASSWORD"] = 8] = "TYPE_TEXT_VISIBLE_PASSWORD";
+            InputType[InputType["TYPE_NUMBER_PASSWORD"] = 9] = "TYPE_NUMBER_PASSWORD";
+            InputType[InputType["TYPE_NUMBER_SIGNED"] = 10] = "TYPE_NUMBER_SIGNED";
+            InputType[InputType["TYPE_NUMBER_DECIMAL"] = 11] = "TYPE_NUMBER_DECIMAL";
+        })(text.InputType || (text.InputType = {}));
+        var InputType = text.InputType;
+        var InputType;
+        (function (InputType) {
+            class LimitCode {
+            }
+            LimitCode.TYPE_CLASS_NUMBER = [
+                KeyEvent.KEYCODE_Digit0,
+                KeyEvent.KEYCODE_Digit1,
+                KeyEvent.KEYCODE_Digit2,
+                KeyEvent.KEYCODE_Digit3,
+                KeyEvent.KEYCODE_Digit4,
+                KeyEvent.KEYCODE_Digit5,
+                KeyEvent.KEYCODE_Digit6,
+                KeyEvent.KEYCODE_Digit7,
+                KeyEvent.KEYCODE_Digit8,
+                KeyEvent.KEYCODE_Digit9,
+            ];
+            LimitCode.TYPE_CLASS_PHONE = [
+                KeyEvent.KEYCODE_Comma,
+                KeyEvent.KEYCODE_Sharp,
+                KeyEvent.KEYCODE_Semicolon,
+                KeyEvent.KEYCODE_Asterisk,
+                KeyEvent.KEYCODE_Left_Parenthesis,
+                KeyEvent.KEYCODE_Right_Parenthesis,
+                KeyEvent.KEYCODE_Slash,
+                KeyEvent.KEYCODE_KeyN,
+                KeyEvent.KEYCODE_Period,
+                KeyEvent.KEYCODE_SPACE,
+                KeyEvent.KEYCODE_Add,
+                KeyEvent.KEYCODE_Minus,
+                KeyEvent.KEYCODE_Period,
+                KeyEvent.KEYCODE_Digit0,
+                KeyEvent.KEYCODE_Digit1,
+                KeyEvent.KEYCODE_Digit2,
+                KeyEvent.KEYCODE_Digit3,
+                KeyEvent.KEYCODE_Digit4,
+                KeyEvent.KEYCODE_Digit5,
+                KeyEvent.KEYCODE_Digit6,
+                KeyEvent.KEYCODE_Digit7,
+                KeyEvent.KEYCODE_Digit8,
+                KeyEvent.KEYCODE_Digit9,
+            ];
+            LimitCode.TYPE_NUMBER_PASSWORD = [
+                KeyEvent.KEYCODE_Digit0,
+                KeyEvent.KEYCODE_Digit1,
+                KeyEvent.KEYCODE_Digit2,
+                KeyEvent.KEYCODE_Digit3,
+                KeyEvent.KEYCODE_Digit4,
+                KeyEvent.KEYCODE_Digit5,
+                KeyEvent.KEYCODE_Digit6,
+                KeyEvent.KEYCODE_Digit7,
+                KeyEvent.KEYCODE_Digit8,
+                KeyEvent.KEYCODE_Digit9,
+            ];
+            LimitCode.TYPE_NUMBER_SIGNED = [
+                KeyEvent.KEYCODE_Minus,
+                KeyEvent.KEYCODE_Digit0,
+                KeyEvent.KEYCODE_Digit1,
+                KeyEvent.KEYCODE_Digit2,
+                KeyEvent.KEYCODE_Digit3,
+                KeyEvent.KEYCODE_Digit4,
+                KeyEvent.KEYCODE_Digit5,
+                KeyEvent.KEYCODE_Digit6,
+                KeyEvent.KEYCODE_Digit7,
+                KeyEvent.KEYCODE_Digit8,
+                KeyEvent.KEYCODE_Digit9,
+            ];
+            LimitCode.TYPE_NUMBER_DECIMAL = [
+                KeyEvent.KEYCODE_Period,
+                KeyEvent.KEYCODE_Digit0,
+                KeyEvent.KEYCODE_Digit1,
+                KeyEvent.KEYCODE_Digit2,
+                KeyEvent.KEYCODE_Digit3,
+                KeyEvent.KEYCODE_Digit4,
+                KeyEvent.KEYCODE_Digit5,
+                KeyEvent.KEYCODE_Digit6,
+                KeyEvent.KEYCODE_Digit7,
+                KeyEvent.KEYCODE_Digit8,
+                KeyEvent.KEYCODE_Digit9,
+            ];
+            InputType.LimitCode = LimitCode;
+        })(InputType = text.InputType || (text.InputType = {}));
     })(text = android.text || (android.text = {}));
 })(android || (android = {}));
 var android;
@@ -30426,6 +30745,7 @@ var android;
         var Paint = android.graphics.Paint;
         var Path = android.graphics.Path;
         var Rect = android.graphics.Rect;
+        var Color = android.graphics.Color;
         var RectF = android.graphics.RectF;
         var Handler = android.os.Handler;
         var BoringLayout = android.text.BoringLayout;
@@ -30456,6 +30776,7 @@ var android;
         class TextView extends View {
             constructor(context, bindElement, defStyle = android.R.attr.textViewStyle) {
                 super(context, bindElement, null);
+                this.mTextColor = ColorStateList.valueOf(Color.BLACK);
                 this.mCurTextColor = 0;
                 this.mCurHintTextColor = 0;
                 this.mSpannableFactory = Spannable.Factory.getInstance();
@@ -30502,6 +30823,8 @@ var android;
                 const a = this._attrBinder;
                 a.addAttr('textColorHighlight', (value) => {
                     this.setHighlightColor(a.parseColor(value, this.mHighlightColor));
+                }, () => {
+                    return this.getHighlightColor();
                 });
                 a.addAttr('textColor', (value) => {
                     let color = a.parseColorList(value);
@@ -30528,41 +30851,59 @@ var android;
                 });
                 a.addAttr('shadowColor', (value) => {
                     this.setShadowLayer(this.mShadowRadius, this.mShadowDx, this.mShadowDy, a.parseColor(value, this.mTextPaint.shadowColor));
+                }, () => {
+                    return this.getShadowColor();
                 });
                 a.addAttr('shadowDx', (value) => {
                     let dx = a.parseNumber(value, this.mShadowDx);
                     this.setShadowLayer(this.mShadowRadius, dx, this.mShadowDy, this.mTextPaint.shadowColor);
+                }, () => {
+                    return this.getShadowDx();
                 });
                 a.addAttr('shadowDy', (value) => {
                     let dy = a.parseNumber(value, this.mShadowDy);
                     this.setShadowLayer(this.mShadowRadius, this.mShadowDx, dy, this.mTextPaint.shadowColor);
+                }, () => {
+                    return this.getShadowDy();
                 });
                 a.addAttr('shadowRadius', (value) => {
                     let radius = a.parseNumber(value, this.mShadowRadius);
                     this.setShadowLayer(radius, this.mShadowDx, this.mShadowDy, this.mTextPaint.shadowColor);
+                }, () => {
+                    return this.getShadowRadius();
                 });
                 a.addAttr('drawableLeft', (value) => {
                     let dr = this.mDrawables || {};
                     let drawable = a.parseDrawable(value);
                     this.setCompoundDrawablesWithIntrinsicBounds(drawable, dr.mDrawableTop, dr.mDrawableRight, dr.mDrawableBottom);
+                }, () => {
+                    return this.getCompoundDrawables()[0];
                 });
                 a.addAttr('drawableTop', (value) => {
                     let dr = this.mDrawables || {};
                     let drawable = a.parseDrawable(value);
                     this.setCompoundDrawablesWithIntrinsicBounds(dr.mDrawableLeft, drawable, dr.mDrawableRight, dr.mDrawableBottom);
+                }, () => {
+                    return this.getCompoundDrawables()[1];
                 });
                 a.addAttr('drawableRight', (value) => {
                     let dr = this.mDrawables || {};
                     let drawable = a.parseDrawable(value);
                     this.setCompoundDrawablesWithIntrinsicBounds(dr.mDrawableLeft, dr.mDrawableTop, drawable, dr.mDrawableBottom);
+                }, () => {
+                    return this.getCompoundDrawables()[2];
                 });
                 a.addAttr('drawableBottom', (value) => {
                     let dr = this.mDrawables || {};
                     let drawable = a.parseDrawable(value);
                     this.setCompoundDrawablesWithIntrinsicBounds(dr.mDrawableLeft, dr.mDrawableTop, dr.mDrawableRight, drawable);
+                }, () => {
+                    return this.getCompoundDrawables()[3];
                 });
                 a.addAttr('drawablePadding', (value) => {
                     this.setCompoundDrawablePadding(a.parseNumber(value));
+                }, () => {
+                    return this.getCompoundDrawablePadding();
                 });
                 a.addAttr('maxLines', (value) => {
                     value = Number.parseInt(value);
@@ -30678,6 +31019,8 @@ var android;
                 });
                 a.addAttr('enabled', (value) => {
                     this.setEnabled(a.parseBoolean(value, this.isEnabled()));
+                }, () => {
+                    return this.isEnabled();
                 });
                 a.addAttr('lineSpacingExtra', (value) => {
                     this.setLineSpacing(a.parseNumber(value, this.mSpacingAdd), this.mSpacingMult);
@@ -41405,6 +41748,462 @@ var android;
 })(android || (android = {}));
 var android;
 (function (android) {
+    var text;
+    (function (text) {
+        var method;
+        (function (method) {
+            class PasswordTransformationMethod extends method.SingleLineTransformationMethod {
+                getTransformation(source, v) {
+                    let transform = super.getTransformation(source, v);
+                    if (transform)
+                        transform = new Array(transform.length + 1).join('•');
+                    return transform;
+                }
+                static getInstance() {
+                    if (PasswordTransformationMethod.instance != null)
+                        return PasswordTransformationMethod.instance;
+                    PasswordTransformationMethod.instance = new PasswordTransformationMethod();
+                    return PasswordTransformationMethod.instance;
+                }
+            }
+            method.PasswordTransformationMethod = PasswordTransformationMethod;
+        })(method = text.method || (text.method = {}));
+    })(text = android.text || (android.text = {}));
+})(android || (android = {}));
+var android;
+(function (android) {
+    var widget;
+    (function (widget) {
+        var TextUtils = android.text.TextUtils;
+        var TextView = android.widget.TextView;
+        var Gravity = android.view.Gravity;
+        var Color = android.graphics.Color;
+        var Canvas = android.graphics.Canvas;
+        var Integer = java.lang.Integer;
+        var InputType = android.text.InputType;
+        var PasswordTransformationMethod = android.text.method.PasswordTransformationMethod;
+        var Platform = androidui.util.Platform;
+        class EditText extends TextView {
+            constructor(context, bindElement, defStyle = android.R.attr.editTextStyle) {
+                super(context, bindElement, null);
+                this.mInputType = InputType.TYPE_NULL;
+                this.mForceDisableDraw = false;
+                this.mMaxLength = Integer.MAX_VALUE;
+                let a = this._attrBinder;
+                a.addAttr('inputType', (value) => {
+                    switch (value + '') {
+                        case 'none':
+                            this.setInputType(InputType.TYPE_NULL);
+                            break;
+                        case 'text':
+                            this.setInputType(InputType.TYPE_CLASS_TEXT);
+                            break;
+                        case 'textUri':
+                            this.setInputType(InputType.TYPE_CLASS_URI);
+                            break;
+                        case 'textEmailAddress':
+                            this.setInputType(InputType.TYPE_CLASS_EMAIL_ADDRESS);
+                            break;
+                        case 'textPassword':
+                            this.setInputType(InputType.TYPE_TEXT_PASSWORD);
+                            break;
+                        case 'textVisiblePassword':
+                            this.setInputType(InputType.TYPE_TEXT_VISIBLE_PASSWORD);
+                            break;
+                        case 'number':
+                        case 'numberSigned':
+                        case 'numberDecimal':
+                            this.setInputType(InputType.TYPE_CLASS_NUMBER);
+                            break;
+                        case 'numberPassword':
+                            this.setInputType(InputType.TYPE_NUMBER_PASSWORD);
+                            break;
+                        case 'phone':
+                            this.setInputType(InputType.TYPE_CLASS_PHONE);
+                            break;
+                    }
+                });
+                a.addAttr('maxLength', (value) => {
+                    this.mMaxLength = a.parseNumber(value, this.mMaxLength);
+                });
+                if (defStyle)
+                    this.applyDefaultAttributes(defStyle);
+            }
+            initBindElement(bindElement) {
+                super.initBindElement(bindElement);
+                this.switchToMultilineInputElement();
+            }
+            onInputValueChange() {
+                let text = this.inputElement.value;
+                let filterText = '';
+                for (let i = 0, length = text.length; i < length; i++) {
+                    let c = text.codePointAt(i);
+                    if (!this.filterKeyCode(c) && filterText.length < this.mMaxLength) {
+                        filterText += text[i];
+                    }
+                }
+                if (text != filterText) {
+                    text = filterText;
+                    this.inputElement.value = text;
+                }
+                if (!text || text.length == 0) {
+                    this.setForceDisableDrawText(false);
+                }
+                else {
+                    this.setForceDisableDrawText(true);
+                }
+                this.setText(text);
+            }
+            switchToSingleLineInputElement() {
+                if (!this.mSingleLineInputElement) {
+                    this.mSingleLineInputElement = document.createElement('input');
+                    this.mSingleLineInputElement.style.position = 'absolute';
+                    this.mSingleLineInputElement.style['webkitAppearance'] = 'none';
+                    this.mSingleLineInputElement.style.borderRadius = '0';
+                    this.mSingleLineInputElement.style.overflow = 'auto';
+                    this.mSingleLineInputElement.style.background = 'transparent';
+                    this.mSingleLineInputElement.style.fontFamily = Canvas.getMeasureTextFontFamily();
+                    this.mSingleLineInputElement.onblur = () => {
+                        this.mSingleLineInputElement.style.opacity = '0';
+                        this.setForceDisableDrawText(false);
+                    };
+                    this.mSingleLineInputElement.onfocus = () => {
+                        this.mSingleLineInputElement.style.opacity = '1';
+                        if (this.getText().length > 0) {
+                            this.setForceDisableDrawText(true);
+                        }
+                    };
+                    this.mSingleLineInputElement.oninput = () => this.onInputValueChange();
+                }
+                if (this.inputElement === this.mSingleLineInputElement)
+                    return;
+                if (this.inputElement && this.inputElement.parentElement) {
+                    this.bindElement.removeChild(this.inputElement);
+                    this.bindElement.appendChild(this.mSingleLineInputElement);
+                }
+                this.inputElement = this.mSingleLineInputElement;
+            }
+            switchToMultilineInputElement() {
+                if (!this.mMultilineInputElement) {
+                    this.mMultilineInputElement = document.createElement('textarea');
+                    this.mMultilineInputElement.style.position = 'absolute';
+                    this.mMultilineInputElement.style['webkitAppearance'] = 'none';
+                    this.mMultilineInputElement.style['resize'] = 'none';
+                    this.mMultilineInputElement.style.borderRadius = '0';
+                    this.mMultilineInputElement.style.overflow = 'auto';
+                    this.mMultilineInputElement.style.background = 'transparent';
+                    this.mMultilineInputElement.style.boxSizing = 'border-box';
+                    this.mMultilineInputElement.style.fontFamily = Canvas.getMeasureTextFontFamily();
+                    this.mMultilineInputElement.onblur = () => {
+                        this.mMultilineInputElement.style.opacity = '0';
+                        this.setForceDisableDrawText(false);
+                    };
+                    this.mMultilineInputElement.onfocus = () => {
+                        this.mMultilineInputElement.style.opacity = '1';
+                        if (this.getText().length > 0) {
+                            this.setForceDisableDrawText(true);
+                        }
+                    };
+                    this.mMultilineInputElement.oninput = () => this.onInputValueChange();
+                }
+                if (this.inputElement === this.mMultilineInputElement)
+                    return;
+                if (this.inputElement && this.inputElement.parentElement) {
+                    this.bindElement.removeChild(this.inputElement);
+                    this.bindElement.appendChild(this.mMultilineInputElement);
+                }
+                this.inputElement = this.mMultilineInputElement;
+            }
+            tryShowInputElement() {
+                if (!this.isInputElementShowed()) {
+                    this.inputElement.value = this.getText().toString();
+                    this.bindElement.appendChild(this.inputElement);
+                    this.inputElement.focus();
+                    if (this.getText().length > 0) {
+                        this.setForceDisableDrawText(true);
+                    }
+                    this.syncTextBoundInfoToInputElement();
+                }
+            }
+            performClick(event) {
+                this.tryShowInputElement();
+                return super.performClick(event);
+            }
+            tryDismissInputElement() {
+                try {
+                    if (this.inputElement.parentNode)
+                        this.bindElement.removeChild(this.inputElement);
+                }
+                catch (e) {
+                }
+                this.setForceDisableDrawText(false);
+            }
+            onFocusChanged(focused, direction, previouslyFocusedRect) {
+                super.onFocusChanged(focused, direction, previouslyFocusedRect);
+                if (focused) {
+                    this.tryShowInputElement();
+                }
+                else {
+                    this.tryDismissInputElement();
+                }
+            }
+            isInputElementShowed() {
+                return this.inputElement.parentElement != null;
+            }
+            setForceDisableDrawText(disable) {
+                if (this.mForceDisableDraw == disable)
+                    return;
+                this.mForceDisableDraw = disable;
+                if (disable) {
+                    this.mTextPaint.setAlpha(0);
+                }
+                else {
+                    this.mTextPaint.setAlpha(255);
+                }
+                this.invalidate();
+            }
+            updateTextColors() {
+                super.updateTextColors();
+                if (this.isInputElementShowed()) {
+                    this.syncTextBoundInfoToInputElement();
+                }
+            }
+            onTouchEvent(event) {
+                if (this.isInputElementShowed()) {
+                    event[android.view.ViewRootImpl.ContinueEventToDom] = true;
+                    if (this.inputElement.scrollHeight > this.inputElement.offsetHeight || this.inputElement.scrollWidth > this.inputElement.offsetWidth) {
+                        this.getParent().requestDisallowInterceptTouchEvent(true);
+                    }
+                }
+                return super.onTouchEvent(event) || this.isInputElementShowed();
+            }
+            filterKeyEvent(event) {
+                let keyCode = event.getKeyCode();
+                if (keyCode == android.view.KeyEvent.KEYCODE_Backspace || keyCode == android.view.KeyEvent.KEYCODE_Del
+                    || event.isCtrlPressed() || event.isAltPressed() || event.isMetaPressed()) {
+                    return false;
+                }
+                if (keyCode == android.view.KeyEvent.KEYCODE_ENTER && this.isSingleLine()) {
+                    return true;
+                }
+                if (event.mIsTypingKey) {
+                    if (this.getText().length >= this.mMaxLength) {
+                        return true;
+                    }
+                    return this.filterKeyCode(keyCode);
+                }
+                return false;
+            }
+            filterKeyCode(keyCode) {
+                switch (this.mInputType) {
+                    case InputType.TYPE_NUMBER_SIGNED:
+                        if (keyCode === android.view.KeyEvent.KEYCODE_Minus && this.getText().length > 0)
+                            return true;
+                        return InputType.LimitCode.TYPE_NUMBER_SIGNED.indexOf(keyCode) === -1;
+                    case InputType.TYPE_NUMBER_DECIMAL:
+                        return InputType.LimitCode.TYPE_NUMBER_DECIMAL.indexOf(keyCode) === -1;
+                    case InputType.TYPE_CLASS_NUMBER:
+                        return InputType.LimitCode.TYPE_CLASS_NUMBER.indexOf(keyCode) === -1;
+                    case InputType.TYPE_NUMBER_PASSWORD:
+                        return InputType.LimitCode.TYPE_NUMBER_PASSWORD.indexOf(keyCode) === -1;
+                    case InputType.TYPE_CLASS_PHONE:
+                        return InputType.LimitCode.TYPE_CLASS_PHONE.indexOf(keyCode) === -1;
+                }
+                return false;
+            }
+            checkFilterKeyEventToDom(event) {
+                if (this.isInputElementShowed()) {
+                    if (this.filterKeyEvent(event)) {
+                        event[android.view.ViewRootImpl.ContinueEventToDom] = false;
+                    }
+                    else {
+                        event[android.view.ViewRootImpl.ContinueEventToDom] = true;
+                    }
+                }
+            }
+            onKeyDown(keyCode, event) {
+                this.checkFilterKeyEventToDom(event);
+                return super.onKeyDown(keyCode, event) || true;
+            }
+            onKeyUp(keyCode, event) {
+                this.checkFilterKeyEventToDom(event);
+                return super.onKeyUp(keyCode, event) || true;
+            }
+            requestSyncBoundToElement(immediately = false) {
+                if (this.inputElement.parentNode && this.inputElement.style.opacity != '0') {
+                    immediately = true;
+                }
+                super.requestSyncBoundToElement(immediately);
+            }
+            setRawTextSize(size) {
+                super.setRawTextSize(size);
+                if (this.isInputElementShowed()) {
+                    this.syncTextBoundInfoToInputElement();
+                }
+            }
+            onTextChanged(text, start, lengthBefore, lengthAfter) {
+                if (this.isInputElementShowed()) {
+                    this.syncTextBoundInfoToInputElement();
+                }
+            }
+            onLayout(changed, left, top, right, bottom) {
+                super.onLayout(changed, left, top, right, bottom);
+                if (this.isInputElementShowed()) {
+                    this.syncTextBoundInfoToInputElement();
+                }
+            }
+            setGravity(gravity) {
+                super.setGravity(gravity);
+                if (this.isInputElementShowed()) {
+                    this.syncTextBoundInfoToInputElement();
+                }
+            }
+            setInputType(type) {
+                this.mInputType = type;
+                this.inputElement.style['webkitTextSecurity'] = '';
+                this.setTransformationMethod(null);
+                switch (type) {
+                    case InputType.TYPE_NULL:
+                        this.switchToMultilineInputElement();
+                        this.setSingleLine(false);
+                        break;
+                    case InputType.TYPE_CLASS_TEXT:
+                        this.switchToMultilineInputElement();
+                        this.setSingleLine(false);
+                        break;
+                    case InputType.TYPE_CLASS_URI:
+                        this.switchToSingleLineInputElement();
+                        this.inputElement.setAttribute('type', 'url');
+                        this.setSingleLine(true);
+                        break;
+                    case InputType.TYPE_CLASS_EMAIL_ADDRESS:
+                        this.switchToSingleLineInputElement();
+                        this.inputElement.setAttribute('type', 'email');
+                        this.setSingleLine(true);
+                        break;
+                    case InputType.TYPE_NUMBER_SIGNED:
+                    case InputType.TYPE_NUMBER_DECIMAL:
+                    case InputType.TYPE_CLASS_NUMBER:
+                        this.switchToSingleLineInputElement();
+                        this.inputElement.setAttribute('type', 'number');
+                        this.setSingleLine(true);
+                        break;
+                    case InputType.TYPE_NUMBER_PASSWORD:
+                        this.switchToSingleLineInputElement();
+                        this.inputElement.setAttribute('type', 'number');
+                        this.inputElement.style['webkitTextSecurity'] = 'disc';
+                        this.setSingleLine(true);
+                        this.setTransformationMethod(PasswordTransformationMethod.getInstance());
+                        break;
+                    case InputType.TYPE_CLASS_PHONE:
+                        this.switchToSingleLineInputElement();
+                        this.inputElement.setAttribute('type', 'tel');
+                        this.setSingleLine(true);
+                        break;
+                    case InputType.TYPE_TEXT_PASSWORD:
+                        this.switchToSingleLineInputElement();
+                        this.inputElement.setAttribute('type', 'password');
+                        this.setSingleLine(true);
+                        this.setTransformationMethod(PasswordTransformationMethod.getInstance());
+                        break;
+                    case InputType.TYPE_TEXT_VISIBLE_PASSWORD:
+                        this.switchToSingleLineInputElement();
+                        this.inputElement.setAttribute('type', 'email');
+                        this.setSingleLine(true);
+                        break;
+                }
+            }
+            getInputType() {
+                return this.mInputType;
+            }
+            syncTextBoundInfoToInputElement() {
+                let left = this.getLeft();
+                let top = this.getTop();
+                let right = this.getRight();
+                let bottom = this.getBottom();
+                const density = this.getResources().getDisplayMetrics().density;
+                let maxHeight = this.getMaxHeight();
+                if (maxHeight <= 0 || maxHeight >= Integer.MAX_VALUE) {
+                    let maxLine = this.getMaxLines();
+                    if (maxLine > 0 && maxLine < Integer.MAX_VALUE) {
+                        maxHeight = maxLine * this.getLineHeight();
+                    }
+                }
+                let textHeight = bottom - top - this.getCompoundPaddingTop() - this.getCompoundPaddingBottom();
+                if (maxHeight <= 0 || maxHeight > textHeight) {
+                    maxHeight = textHeight;
+                }
+                let layout = this.mLayout;
+                if (this.mHint != null && this.mText.length == 0) {
+                    layout = this.mHintLayout;
+                }
+                let height = layout ? Math.min(layout.getLineTop(layout.getLineCount()), maxHeight) : maxHeight;
+                this.inputElement.style.height = height / density + 1 + 'px';
+                this.inputElement.style.top = '';
+                this.inputElement.style.bottom = '';
+                this.inputElement.style.transform = this.inputElement.style.webkitTransform = '';
+                let gravity = this.getGravity();
+                switch (gravity & Gravity.VERTICAL_GRAVITY_MASK) {
+                    case Gravity.TOP:
+                        this.inputElement.style.top = this.getCompoundPaddingTop() / density + 'px';
+                        break;
+                    case Gravity.BOTTOM:
+                        this.inputElement.style.bottom = this.getCompoundPaddingBottom() / density + 'px';
+                        break;
+                    default:
+                        this.inputElement.style.top = '50%';
+                        this.inputElement.style.transform = this.inputElement.style.webkitTransform = 'translate(0, -50%)';
+                        break;
+                }
+                switch (gravity & Gravity.HORIZONTAL_GRAVITY_MASK) {
+                    case Gravity.LEFT:
+                        this.inputElement.style.textAlign = 'left';
+                        break;
+                    case Gravity.RIGHT:
+                        this.inputElement.style.textAlign = 'right';
+                        break;
+                    default:
+                        this.inputElement.style.textAlign = 'center';
+                        break;
+                }
+                const isIOS = Platform.isIOS;
+                this.inputElement.style.left = this.getCompoundPaddingLeft() / density - (isIOS ? 3 : 0) + 'px';
+                this.inputElement.style.width = (right - left - this.getCompoundPaddingRight() - this.getCompoundPaddingLeft()) / density + (isIOS ? 6 : 1) + 'px';
+                this.inputElement.style.lineHeight = this.getLineHeight() / density + 'px';
+                if (this.getLineCount() == 1) {
+                    this.inputElement.style.whiteSpace = 'nowrap';
+                }
+                else {
+                    this.inputElement.style.whiteSpace = '';
+                }
+                let text = this.getText().toString();
+                if (text != this.inputElement.value)
+                    this.inputElement.value = text;
+                this.inputElement.style.fontSize = this.getTextSize() / density + 'px';
+                this.inputElement.style.color = Color.toRGBAFunc(this.getCurrentTextColor());
+                if (this.inputElement == this.mMultilineInputElement) {
+                    this.inputElement.style.padding = (this.getTextSize() / density / 5).toFixed(1) + 'px 0px 0px 0px';
+                }
+                else {
+                    this.inputElement.style.padding = '0px';
+                }
+            }
+            onAttachedToWindow() {
+                this.getContext().androidUI.showDebugLayout();
+                return super.onAttachedToWindow();
+            }
+            setEllipsize(ellipsis) {
+                if (ellipsis == TextUtils.TruncateAt.MARQUEE) {
+                    throw Error(`new IllegalArgumentException("EditText cannot use the ellipsize mode " + "TextUtils.TruncateAt.MARQUEE")`);
+                }
+                super.setEllipsize(ellipsis);
+            }
+        }
+        widget.EditText = EditText;
+    })(widget = android.widget || (android.widget = {}));
+})(android || (android = {}));
+var android;
+(function (android) {
     var widget;
     (function (widget) {
         var Matrix = android.graphics.Matrix;
@@ -50928,6 +51727,117 @@ var android;
 })(android || (android = {}));
 var android;
 (function (android) {
+    var webkit;
+    (function (webkit) {
+        class WebViewClient {
+            onPageStarted(view, url) {
+            }
+            onPageFinished(view, url) {
+            }
+            onReceivedTitle(view, title) {
+            }
+        }
+        webkit.WebViewClient = WebViewClient;
+    })(webkit = android.webkit || (android.webkit = {}));
+})(android || (android = {}));
+var android;
+(function (android) {
+    var webkit;
+    (function (webkit) {
+        var FrameLayout = android.widget.FrameLayout;
+        class WebView extends FrameLayout {
+            constructor(context, bindElement, defStyle) {
+                super(context, bindElement, defStyle);
+                let density = this.getResources().getDisplayMetrics().density;
+                this.setMinimumWidth(300 * density);
+                this.setMinimumHeight(150 * density);
+                this.initIFrameElement();
+            }
+            initIFrameElement() {
+                this.iFrameElement = document.createElement('iframe');
+                this.iFrameElement.style.border = 'none';
+                this.iFrameElement.style.height = '100%';
+                this.iFrameElement.style.width = '100%';
+                this.iFrameElement.onload = () => {
+                    if (this.mClient) {
+                        this.mClient.onReceivedTitle(this, this.getTitle());
+                        this.mClient.onPageFinished(this, this.iFrameElement.src);
+                    }
+                };
+                this.bindElement.appendChild(this.iFrameElement);
+            }
+            loadUrl(url) {
+                if (this.mClient)
+                    this.mClient.onPageStarted(this, url);
+                this.iFrameElement.src = url;
+            }
+            loadData(data) {
+                this.iFrameElement['srcdoc'] = data;
+            }
+            evaluateJavascript(script) {
+                try {
+                    eval.call(this.iFrameElement.contentWindow, script);
+                }
+                catch (e) {
+                    console.warn(e);
+                    eval(script);
+                }
+            }
+            stopLoading() {
+                try {
+                    this.iFrameElement.contentWindow['stop']();
+                }
+                catch (e) {
+                    console.error(e);
+                }
+            }
+            reload() {
+                this.iFrameElement.src = this.iFrameElement.src;
+            }
+            getUrl() {
+                try {
+                    return this.iFrameElement.contentWindow.document.URL;
+                }
+                catch (e) {
+                    return this.iFrameElement.src;
+                }
+            }
+            getTitle() {
+                try {
+                    return this.iFrameElement.contentWindow.document.title;
+                }
+                catch (e) {
+                    console.warn(e);
+                    return '';
+                }
+            }
+            getContentHeight() {
+                try {
+                    return this.iFrameElement.contentWindow.document.documentElement.offsetHeight;
+                }
+                catch (e) {
+                    console.warn(e);
+                    return 0;
+                }
+            }
+            getContentWidth() {
+                try {
+                    return this.iFrameElement.contentWindow.document.documentElement.offsetWidth;
+                }
+                catch (e) {
+                    console.warn(e);
+                    return 0;
+                }
+            }
+            setWebViewClient(client) {
+                this.mClient = client;
+            }
+        }
+        webkit.WebView = WebView;
+    })(webkit = android.webkit || (android.webkit = {}));
+})(android || (android = {}));
+var android;
+(function (android) {
     var view;
     (function (view) {
         var animation;
@@ -56477,18 +57387,22 @@ var androidui;
         class HtmlBaseView extends View {
             constructor(context, bindElement, defStyle) {
                 super(context, bindElement, defStyle);
+                this.mHtmlTouchAble = false;
             }
             onTouchEvent(event) {
-                event[android.view.ViewRootImpl.ContinueEventToDom] = true;
-                return super.onTouchEvent(event) || true;
+                if (this.mHtmlTouchAble) {
+                    event[android.view.ViewRootImpl.ContinueEventToDom] = true;
+                }
+                return super.onTouchEvent(event) || this.mHtmlTouchAble;
+            }
+            setHtmlTouchAble(enable) {
+                this.mHtmlTouchAble = enable;
+            }
+            isHtmlTouchAble() {
+                return this.mHtmlTouchAble;
             }
             requestSyncBoundToElement(immediately = true) {
                 super.requestSyncBoundToElement(immediately);
-            }
-            setLayerType(layerType) {
-                if (layerType != View.LAYER_TYPE_NONE)
-                    return;
-                super.setLayerType(layerType);
             }
             onAttachedToWindow() {
                 this.getContext().androidUI.showDebugLayout();
@@ -56536,6 +57450,7 @@ var androidui;
                 else {
                     let sWidth = this.bindElement.style.width;
                     this.bindElement.style.width = width / density + "px";
+                    this.bindElement.style.height = '';
                     height = this.bindElement.offsetHeight * density;
                     this.bindElement.style.width = sWidth;
                     height = Math.max(height, this.getSuggestedMinimumHeight());
