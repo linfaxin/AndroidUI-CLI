@@ -1,31 +1,24 @@
-# AndroidUI Sample
+# androidui-cli
 
-This is a Hello World WebApp for AndroidUI. 
-
-Ensure you has installed nodejs, and run 'npm install' at project dir.
-
-If you want to create a new AndroidUI project, these files you should copy to:
-
-1. build.sh : to build the project, you should change the 'packageName' defined in the file. Open the file to see detail.
-2. build_res.js : pack resource into js, execute by nodejs, call by build.sh.
-3. tsconfig.json : typescript's convert config.
-3. package.json : node package manager(npm)'s config.
+The command line tool to build AndroidUI applications.
 
 
-You may need to create these directories:
+# Requirements
 
-1. res : put your resource in this directory, like image, layout, values, they will be packed into .js when build.
-2. src : suggest you to put all your typescript code in this directory.
-3. assets : suggest you to put all your 'not pack in' resources in this directory. Like image, js lib, etc.
+* [Node.js](http://nodejs.org/)
 
+# Install 
 
-These directories will be auto created when build.
+    npm install -g androidui-cli
+    
+# Usage
 
-1. gen : resources will build here first.
-2. build : code & resources build result.
+create a androidui project with default template
 
+    androidui create
+    
+# Project Commands
 
-It's enough, if your code or resource change, just execute build.sh to rebuild your project.
-
-If you want to put image in 'res', read [this](https://github.com/linfaxin/AndroidUI4Web-HelloWorld/tree/master/res/image) for more information.
+* `list`  list all available templates
+* `create [template]`  create project with template or default
 

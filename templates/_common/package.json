@@ -1,0 +1,16 @@
+{
+  "repository": {},
+  "license": "UNLICENSED",
+
+  "devDependencies": {
+    "androidui-webapp": "^0.4.2",
+    "jsdom": "^7.2.2",
+    "typescript": "^1.7.5",
+    "babel-cli": "^6.4.5",
+    "babel-preset-es2015": "^6.3.13"
+  },
+  "scripts": {
+    "build": "npm install && node build_res.js && tsc -p ./ && babel build/app.js -o build/app.es5.js -s --presets=es2015",
+    "updateSDK": "npm install && cp -r node_modules/androidui-webapp/dist/* androidui-sdk/"
+  }
+}

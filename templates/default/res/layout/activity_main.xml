@@ -1,0 +1,16 @@
+<FrameLayout xmlns="android" xmlns:android="http://schemas.android.com/apk/res/android">
+    <TextView
+            android:id="textView"
+            android:text="Hello world"
+            android:gravity="center"
+            android:textSize="20sp"
+    />
+    <TextView
+            android:text="power by AndroidUI"
+            android:drawableRight="@drawable/ic_github"
+            android:drawablePadding="4dp"
+            android:gravity="bottom"
+            android:layout_marginBottom="8dp"
+            android:textSize="12sp"
+    />
+</FrameLayout>
