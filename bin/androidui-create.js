@@ -3,6 +3,7 @@
 var program = require('commander');
 var chalk = require('chalk');
 var fs = require('fs');
+var fse = require('fs-extra');
 var child_process = require('child_process');
 var package = require('../package');
 
@@ -50,11 +51,24 @@ child_process.exec('npm install ' + package.name, function(err,stdout,stderr){
         console.error(`template ${template} not found!`);
         return;
     }
-    child_process.exec(`cp -r ${templateCommonDir}/* ${templateDir}/* ./`);
+
+    try {
+        fse.copySync(templateCommonDir, './');
+        fse.copySync(templateDir, './');
+    } catch (err) {
+        console.error(err)
+    }
+
     console.log('downloading project dependencies...');
     child_process.exec('npm install', function(err,stdout,stderr){
         console.log('build project...');
-        child_process.exec(`cp -r node_modules/androidui-webapp/dist/* androidui-sdk/`);
+
+        try {
+            fse.copySync('node_modules/androidui-webapp/dist', 'androidui-sdk/');
+        } catch (err) {
+            console.error(err)
+        }
+
         child_process.exec('npm run build');
         console.log('create project finish');
     });
