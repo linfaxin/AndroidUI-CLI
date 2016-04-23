@@ -13,7 +13,7 @@ The command line tool to build AndroidUI applications.
     
 # Usage
 
-create a androidui project with default template
+create a androidui project with default template at current directory
 
     androidui create
     
