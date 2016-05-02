@@ -1,11 +1,3 @@
-# App package name, your resources will build under it, like: sample.app.R.image.xxx / sample.app.R.layout.xxx
-packageName="my.app";
-
-# sdk path relate with gen/R/xxx.ts
-dReference="../../androidui-sdk/android-ui.d.ts";
-
-
-#== don't modify below code ==
 
 #init node_modules, include typescript & babel, you can ignore this line if you already installed and don't wan't check new version
 echo "installing dependencies"
@@ -13,7 +5,7 @@ npm install
 
 # pack resources into js. Ensure you have installed nodejs: http://www.nodejs.org
 echo "building resource"
-node build_res.js $packageName $dReference
+node build_res.js
 
 # convert typescript into es6. Ensure you have installed typescript: http://www.typescriptlang.org/
 echo "converting TypeScript to ES6"
