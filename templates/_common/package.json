@@ -11,6 +11,6 @@
   },
   "scripts": {
     "build": "npm install && node build_res.js && tsc -p ./ && babel build/app.js -o build/app.es5.js -s --presets=es2015",
-    "updateSDK": "npm install && cp -r node_modules/androidui-webapp/dist/* androidui-sdk/"
+    "updateSDK": "cd androidui-sdk && node update_sdk.js && cd .."
   }
 }
