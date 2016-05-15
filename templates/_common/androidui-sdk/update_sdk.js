@@ -26,7 +26,7 @@ function rmdir(dir) {
 }
 
 rmdir('../node_modules/androidui-webapp');
-child_process.exec('npm install', function(err,stdout,stderr){
+child_process.exec('npm install androidui-webapp --save-dev', function(err,stdout,stderr){
     var path = "../node_modules/androidui-webapp/dist/";
     var files = fs.readdirSync(path);
     files.forEach(function(fileName){
