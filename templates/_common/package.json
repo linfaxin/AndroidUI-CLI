@@ -14,8 +14,8 @@
     "postbuild": "echo 'build finish!'",
     "build-install":"echo 'installing dependencies...' && npm install",
     "build-res":"echo 'building resource...' && node build_res.js",
-    "build-ts2es6":"echo 'converting TypeScript to ES6...' && node_modules/.bin/tsc -p ./",
-    "build-es62es5":"echo 'converting ES6 to ES5...' && node_modules/.bin/babel build/app.js -o build/app.es5.js -s --presets=es2015",
+    "build-ts2es6":"echo 'converting TypeScript to ES6...' && \"node_modules/.bin/tsc\" -p ./",
+    "build-es62es5":"echo 'converting ES6 to ES5...' && \"node_modules/.bin/babel\" build/app.js -o build/app.es5.js -s --presets=es2015",
     "updateSDK": "cd androidui-sdk && node update_sdk.js && cd .."
   }
 }
