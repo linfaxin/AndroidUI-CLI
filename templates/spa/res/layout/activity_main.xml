@@ -1,0 +1,23 @@
+<FrameLayout xmlns="android" xmlns:android="http://schemas.android.com/apk/res/android">
+    <Button
+            android:id="button"
+            android:text="Open Page2"
+            android:textSize="20sp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+    />
+    <TextView
+            android:text="power by AndroidUI"
+            android:drawableRight="@drawable/ic_github"
+            android:drawablePadding="4dp"
+            android:layout_gravity="center_horizontal|bottom"
+            android:gravity="center"
+            android:layout_marginBottom="8dp"
+            android:textColor="#666"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:onClick="location.href='https://github.com/linfaxin/AndroidUI-WebApp'"
+    />
+</FrameLayout>

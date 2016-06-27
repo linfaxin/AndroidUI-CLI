@@ -2,15 +2,16 @@
 ///<reference path="../gen/R/layout.ts"/>
 
 module my.app {
-    import Activity = android.app.Activity;
+    import ActionBarActivity = android.app.ActionBarActivity;
     import Bundle = android.os.Bundle;
 
-    export class MainActivity extends Activity{
+    export class Page2Activity extends ActionBarActivity{
 
         protected onCreate(savedInstanceState?:Bundle):void {
             super.onCreate(savedInstanceState);
 
-            this.setContentView(R.layout.activity_main);
+            this.setTitle('Page2');
+
         }
     }
 }
