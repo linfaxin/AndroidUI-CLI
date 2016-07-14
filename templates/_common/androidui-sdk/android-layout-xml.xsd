@@ -73,11 +73,18 @@
       <xs:element ref="ToggleButton" />
       <xs:element ref="TwoLineListItem" />
       <xs:element ref="VideoView" />
+      <xs:element ref="View" />
       <xs:element ref="ViewAnimator" />
       <xs:element ref="ViewFlipper" />
       <xs:element ref="ViewSwitcher" />
       <xs:element ref="ZoomButton" />
       <xs:element ref="ZoomControls" />
+      <xs:element ref="view" />
+      <xs:element ref="include" />
+      <xs:element ref="merge" />
+      <xs:element ref="android.support.v4.view.ViewPager" />
+      <xs:element ref="android.support.v4.widget.DrawerLayout" />
+      <xs:element ref="androidui.widget.PullRefreshLoadLayout" />
     </xs:choice>
   </xs:group>
   <xs:element name="View" type="View" />
@@ -109,9 +116,9 @@
     <xs:attribute ref="android:popupCharacters" />
     <xs:attribute ref="android:popupKeyboard" />
     <xs:attribute ref="android:rowEdgeFlags" />
-    <xs:attribute ref="android:layout_height" />
+    <xs:attribute ref="android:layout_height" use="required"/>
     <xs:attribute ref="android:layout_weight" />
-    <xs:attribute ref="android:layout_width" />
+    <xs:attribute ref="android:layout_width" use="required"/>
     <xs:attribute ref="android:layout_above" />
     <xs:attribute ref="android:layout_alignBaseline" />
     <xs:attribute ref="android:layout_alignBottom" />
@@ -199,6 +206,27 @@
     <xs:attribute ref="android:layout_marginLeft" />
     <xs:attribute ref="android:layout_marginRight" />
     <xs:attribute ref="android:layout_marginTop" />
+
+    <xs:attribute ref="android:state_window_focused" />
+    <xs:attribute ref="android:state_selected" />
+    <xs:attribute ref="android:state_focused" />
+    <xs:attribute ref="android:state_pressed" />
+    <xs:attribute ref="android:state_activated" />
+    <xs:attribute ref="android:state_hovered" />
+    <xs:attribute ref="android:state_checked" />
+    <xs:attribute ref="style" />
+    <xs:attribute ref="android:style" />
+
+    <xs:attribute ref="android:cornerRadius" />
+    <xs:attribute ref="android:cornerRadiusBottomLeft" />
+    <xs:attribute ref="android:cornerRadiusBottomRight" />
+    <xs:attribute ref="android:cornerRadiusTopLeft" />
+    <xs:attribute ref="android:cornerRadiusTopRight" />
+    <xs:attribute ref="android:viewShadowColor" />
+    <xs:attribute ref="android:viewShadowDx" />
+    <xs:attribute ref="android:viewShadowDy" />
+    <xs:attribute ref="android:viewShadowRadius" />
+
   </xs:complexType>
   <xs:element name="GLSurfaceView" type="GLSurfaceView">
     <xs:annotation>
@@ -846,6 +874,7 @@
         <xs:attribute ref="android:scaleType" />
         <xs:attribute ref="android:src" />
         <xs:attribute ref="android:tint" />
+        <xs:attribute ref="android:drawableAlpha" />
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
@@ -1273,4 +1302,187 @@
       <xs:extension base="LinearLayout" />
     </xs:complexContent>
   </xs:complexType>
+
+
+    <xs:element name="view" type="view"/>
+    <xs:complexType name="view">
+        <xs:complexContent mixed="false">
+            <xs:extension base="ViewGroup">
+                <xs:attribute ref="android:class" />
+                <xs:attribute ref="class" />
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:attribute name='class' type='xs:string' />
+    <xs:attribute name="style" type='xs:string' />
+
+    <xs:element name="include" type="include"/>
+    <xs:complexType name="include">
+        <xs:complexContent mixed="false">
+            <xs:extension base="View">
+                <xs:attribute ref="android:layout" />
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="merge" type="ViewGroup"/>
+
+    <!--support lib widget-->
+    <xs:element name="android.support.v4.widget.DrawerLayout" type="ViewGroup"/>
+    <xs:element name="android.support.v4.view.ViewPager" type="ViewGroup"/>
+    <xs:element name="androidui.widget.PullRefreshLoadLayout" type="PullRefreshLoadLayout"/>
+    <xs:complexType name="PullRefreshLoadLayout">
+        <xs:complexContent mixed="false">
+            <xs:extension base="ViewGroup">
+                <xs:attribute ref="android:refreshEnable" />
+                <xs:attribute ref="android:loadEnable" />
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <!--selector-->
+    <xs:element name="selector" type="selector"/>
+    <xs:complexType name="selector">
+        <xs:group minOccurs="0" maxOccurs="unbounded" ref="selector" />
+    </xs:complexType>
+    <xs:group name="selector">
+        <xs:choice>
+            <xs:element name="item">
+                <xs:complexType>
+                    <xs:attribute ref="android:state_accelerated" />
+                    <xs:attribute ref="android:state_activated" />
+                    <xs:attribute ref="android:state_active" />
+                    <xs:attribute ref="android:state_checkable" />
+                    <xs:attribute ref="android:state_checked" />
+                    <xs:attribute ref="android:state_drag_can_accept" />
+                    <xs:attribute ref="android:state_drag_hovered" />
+                    <xs:attribute ref="android:state_enabled" />
+                    <xs:attribute ref="android:state_first" />
+                    <xs:attribute ref="android:state_focused" />
+                    <xs:attribute ref="android:state_hovered" />
+                    <xs:attribute ref="android:state_last" />
+                    <xs:attribute ref="android:state_middle" />
+                    <xs:attribute ref="android:state_pressed" />
+                    <xs:attribute ref="android:state_selected" />
+                    <xs:attribute ref="android:state_single" />
+                    <xs:attribute ref="android:state_window_focused" />
+                    <xs:attribute ref="android:state_empty" />
+                    <xs:attribute ref="android:state_expanded" />
+
+                    <xs:attribute ref="android:color" />
+                    <xs:attribute ref="android:drawable" />
+
+                    <xs:group minOccurs="0" maxOccurs="unbounded" ref="drawable" />
+                </xs:complexType>
+            </xs:element>
+        </xs:choice>
+    </xs:group>
+
+    <!--layer-list-->
+    <xs:element name="layer-list" type="layer-list"/>
+    <xs:complexType name="layer-list">
+        <xs:group minOccurs="0" maxOccurs="unbounded" ref="layer-list" />
+    </xs:complexType>
+    <xs:group name="layer-list">
+        <xs:choice>
+            <xs:element name="item">
+                <xs:complexType>
+                    <xs:attribute ref="android:left" />
+                    <xs:attribute ref="android:top" />
+                    <xs:attribute ref="android:right" />
+                    <xs:attribute ref="android:bottom" />
+                    <xs:attribute ref="android:id" />
+                    <xs:attribute ref="android:drawable" />
+                    <xs:group minOccurs="0" maxOccurs="unbounded" ref="drawable" />
+                </xs:complexType>
+            </xs:element>
+        </xs:choice>
+    </xs:group>
+
+    <!--scale-->
+    <xs:element name="scale">
+        <xs:complexType>
+            <xs:attribute ref="android:scaleWidth" />
+            <xs:attribute ref="android:scaleHeight" />
+            <xs:attribute ref="android:scaleGravity" />
+            <xs:attribute ref="android:useIntrinsicSizeAsMinimum" />
+            <xs:attribute ref="android:drawable" />
+            <xs:group minOccurs="0" maxOccurs="unbounded" ref="drawable" />
+        </xs:complexType>
+    </xs:element>
+
+    <!--clip-->
+    <xs:element name="clip">
+        <xs:complexType>
+            <xs:attribute ref="android:clipOrientation" />
+            <xs:attribute ref="android:gravity" />
+            <xs:attribute ref="android:drawable" />
+            <xs:group minOccurs="0" maxOccurs="unbounded" ref="drawable" />
+        </xs:complexType>
+    </xs:element>
+
+    <!--rotate-->
+    <xs:element name="rotate">
+        <xs:complexType>
+            <xs:attribute ref="android:pivotX" />
+            <xs:attribute ref="android:pivotY" />
+            <xs:attribute ref="android:fromDegrees" />
+            <xs:attribute ref="android:toDegrees" />
+            <xs:attribute ref="android:drawable" />
+            <xs:group minOccurs="0" maxOccurs="unbounded" ref="drawable" />
+        </xs:complexType>
+    </xs:element>
+
+    <!--inset-->
+    <xs:element name="inset">
+        <xs:complexType>
+            <xs:attribute ref="android:inset" />
+            <xs:attribute ref="android:insetLeft" />
+            <xs:attribute ref="android:insetTop" />
+            <xs:attribute ref="android:insetRight" />
+            <xs:attribute ref="android:insetBottom" />
+            <xs:attribute ref="android:drawable" />
+            <xs:group minOccurs="0" maxOccurs="unbounded" ref="drawable" />
+        </xs:complexType>
+    </xs:element>
+
+
+    <!--animation-list-->
+    <xs:element name="animation-list" type="animation-list"/>
+    <xs:complexType name="animation-list">
+        <xs:attribute ref="android:oneshot" />
+        <xs:attribute ref="android:variablePadding" />
+        <xs:group minOccurs="0" maxOccurs="unbounded" ref="animation-list" />
+    </xs:complexType>
+    <xs:group name="animation-list">
+        <xs:choice>
+            <xs:element name="item">
+                <xs:complexType>
+                    <xs:attribute ref="android:duration" />
+                    <xs:attribute ref="android:drawable" />
+                    <xs:group minOccurs="0" maxOccurs="unbounded" ref="drawable" />
+                </xs:complexType>
+            </xs:element>
+        </xs:choice>
+    </xs:group>
+
+    <!--drawable-->
+    <xs:group name="drawable">
+        <xs:choice>
+            <xs:element name="color" type="xs:string" />
+            <xs:element ref="selector" />
+            <xs:element ref="layer-list" />
+            <xs:element ref="scale"/>
+            <xs:element ref="clip"/>
+            <xs:element ref="rotate"/>
+            <xs:element ref="animation-list"/>
+            <xs:element name="inset" type="xs:string"/>
+            <xs:element name="bitmap">
+                <xs:complexType>
+                    <xs:element name="src" type="xs:string"/>
+                </xs:complexType>
+            </xs:element>
+        </xs:choice>
+    </xs:group>
+
 </xs:schema>

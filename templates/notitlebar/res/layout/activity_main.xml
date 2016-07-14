@@ -1,14 +1,16 @@
-<FrameLayout xmlns="android" xmlns:android="http://schemas.android.com/apk/res/android">
-    <Button
-            android:id="button"
-            android:text="Open Page2"
-            android:textSize="20sp"
-            android:layout_width="wrap_content"
+<FrameLayout xmlns="android" xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_height="match_parent"
+    android:layout_width="match_parent">
+    <TextView
+            android:id="textView"
+            android:text="@string/hello_world"
             android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
             android:layout_gravity="center"
+            android:textSize="20sp"
     />
     <TextView
-            android:text="power by AndroidUI"
+            android:text="@string/power_by_androiduix"
             android:drawableRight="@drawable/ic_github"
             android:drawablePadding="4dp"
             android:layout_gravity="center_horizontal|bottom"
@@ -18,6 +20,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="12sp"
-            android:onClick="location.href='https://github.com/linfaxin/AndroidUI-WebApp'"
+            android:onClick="location.href='https://github.com/linfaxin/AndroidUIX'"
     />
 </FrameLayout>

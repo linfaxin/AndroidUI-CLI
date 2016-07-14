@@ -4,7 +4,6 @@
     <option name="languageLevel" value="ES6" />
   </component>
   <component name="ProjectPlainTextFileTypeManager">
-    <file url="file://$PROJECT_DIR$/androidui-sdk/android-ui.d.ts" />
     <file url="file://$PROJECT_DIR$/androidui-sdk/android-ui.es5.js" />
     <file url="file://$PROJECT_DIR$/androidui-sdk/android-ui.js" />
   </component>

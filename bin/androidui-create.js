@@ -39,39 +39,19 @@ process.on('exit', function () {
  * Settings.
  */
 program.parse(process.argv);
-var template = program.args[0] || 'default';
 
 
 console.log('downloading templates...');
 child_process.exec('npm install ' + package.name, function(err,stdout,stderr){
-
-    var templateCommonDir = `node_modules/${package.name}/templates/_common`;
-    var templateDir = `node_modules/${package.name}/templates/${template}`;
-    if(!fs.existsSync(templateDir)){
-        console.error(`template ${template} not found!`);
+    if (err) {
+        console.error(`exec error: ${err}`);
+        console.log('stderr:\n' + stderr);
+        console.log('stdout:\n' + stdout);
         return;
     }
 
-    try {
-        fse.copySync(templateCommonDir, './');
-        fse.copySync(templateDir, './');
-    } catch (err) {
-        console.error(err)
-    }
-
-    console.log('downloading project dependencies...');
-    child_process.exec('npm install', function(err,stdout,stderr){
-        console.log('build project...');
-
-        try {
-            fse.copySync('node_modules/androidui-webapp/dist', 'androidui-sdk/');
-        } catch (err) {
-            console.error(err)
-        }
-
-        child_process.exec('npm run build');
-        console.log('create project finish');
-    });
+    var androiduicli = require(`node_modules/${package.name}`);
+    androiduicli.create(program.args, package);
 });
 
 

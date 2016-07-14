@@ -25,9 +25,16 @@ function rmdir(dir) {
     fs.rmdirSync(dir);
 }
 
-rmdir('../node_modules/androidui-webapp');
-child_process.exec('npm install androidui-webapp --save-dev', function(err,stdout,stderr){
-    var path = "../node_modules/androidui-webapp/dist/";
+rmdir('../node_modules/androiduix');
+child_process.exec('npm install androiduix --save-dev', function(err,stdout,stderr){
+    if (err) {
+        console.error(`exec error: ${err}`);
+        console.log('stderr:\n' + stderr);
+        console.log('stdout:\n' + stdout);
+        return;
+    }
+
+    var path = "../node_modules/androiduix/dist/";
     var files = fs.readdirSync(path);
     files.forEach(function(fileName){
         fs.writeFileSync('./'+fileName, fs.readFileSync(path + '/' + fileName));

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+var program = require('commander');
 var chalk = require('chalk');
 var fs = require('fs');
 var child_process = require('child_process');
@@ -17,15 +18,15 @@ process.on('exit', function () {
 
 console.log('  Loading templates...');
 
+program.parse(process.argv);
 child_process.exec('npm install ' + package.name, function(err,stdout,stderr){
+    if (err) {
+        console.error(`exec error: ${err}`);
+        console.log('stderr:\n' + stderr);
+        console.log('stdout:\n' + stdout);
+        return;
+    }
 
-    console.log('  Available official templates:');
-    var files = fs.readdirSync(`node_modules/${package.name}/templates`);
-    files.forEach(function(fileName){
-        if(fileName.startsWith('_')) return;
-        console.log(
-            '  ' + chalk.yellow('★') +
-            '  ' + chalk.blue('') +
-            ' - ' + fileName);
-    });
+    var androiduicli = require(`node_modules/${package.name}`);
+    androiduicli.list(program.args, package);
 });

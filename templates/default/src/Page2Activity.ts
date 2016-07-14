@@ -1,5 +1,5 @@
 ///<reference path="../androidui-sdk/android-ui.d.ts"/>
-///<reference path="../gen/R/layout.ts"/>
+///<reference path="../gen/R.ts"/>
 
 module my.app {
     import ActionBarActivity = android.app.ActionBarActivity;
