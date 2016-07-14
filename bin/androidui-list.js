@@ -27,6 +27,6 @@ child_process.exec('npm install ' + package.name, function(err,stdout,stderr){
         return;
     }
 
-    var androiduicli = require(`node_modules/${package.name}`);
+    var androiduicli = require(package.name);
     androiduicli.list(program.args, package);
 });
