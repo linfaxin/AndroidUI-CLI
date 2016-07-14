@@ -11,12 +11,7 @@ module my.app {
         protected onCreate(savedInstanceState?:Bundle):void {
             super.onCreate(savedInstanceState);
 
-            this.setTitle('Page1');
             this.setContentView(R.layout.activity_main);
-
-            this.findViewById(R.id.button).setOnClickListener((v:View)=>{
-                this.startActivity('my.app.Page2Activity');
-            });
         }
     }
 }

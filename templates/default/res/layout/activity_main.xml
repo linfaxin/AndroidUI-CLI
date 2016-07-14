@@ -1,13 +1,13 @@
 <FrameLayout xmlns="android" xmlns:android="http://schemas.android.com/apk/res/android"
              android:layout_height="match_parent"
              android:layout_width="match_parent">
-    <Button
-            android:id="button"
-            android:text="@string/open_new_page"
-            android:textSize="20sp"
-            android:layout_width="wrap_content"
+    <TextView
+            android:id="textView"
+            android:text="@string/hello_world"
             android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
             android:layout_gravity="center"
+            android:textSize="20sp"
     />
     <TextView
             android:text="@string/power_by_androiduix"
@@ -16,7 +16,7 @@
             android:layout_gravity="center_horizontal|bottom"
             android:gravity="center"
             android:layout_marginBottom="8dp"
-            android:textColor="#666"
+            android:textColor="#999"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="12sp"

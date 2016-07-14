@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="hello_world">Hello world</string>
     <string name="power_by_androiduix">由AndroidUIX驱动</string>
 </resources>
