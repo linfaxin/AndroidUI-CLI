@@ -1,6 +1,6 @@
 # androidui-cli
 
-The command line tool to build AndroidUI applications.
+The command line tool to create [AndroidUIX](https://github.com/linfaxin/AndroidUIX) project.
 
 
 # Requirements
