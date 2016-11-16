@@ -19,7 +19,7 @@ process.on('exit', function () {
 console.log('  Loading templates...');
 
 program.parse(process.argv);
-child_process.exec('npm install ' + package.name, function(err,stdout,stderr){
+child_process.exec(`npm install ${package.name} --registry=https://registry.npm.taobao.org`, function(err,stdout,stderr){
     if (err) {
         console.error(`exec error: ${err}`);
         console.log('stderr:\n' + stderr);

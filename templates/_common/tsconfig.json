@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
     "removeComments": true,
-    "target":"ES6",
+    "target":"ES5",
     "outFile": "build/app.js",
+    "lib": ["dom", "es5", "es6", "scripthost", "es2015", "es2016"],
     "sourceMap": true
   },
   "exclude": [

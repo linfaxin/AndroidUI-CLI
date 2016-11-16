@@ -13,7 +13,7 @@ module.exports = {
         var templateCommonDir = `node_modules/${package.name}/templates/_common`;
         var templateDir = `node_modules/${package.name}/templates/${template}`;
         if(!fs.existsSync(templateDir)){
-            console.error(`template ${template} not found!`);
+            console.error(`template ${template} not found`);
             return;
         }
 
@@ -25,7 +25,7 @@ module.exports = {
         }
 
         console.log('downloading project dependencies...');
-        child_process.exec('npm install', function(err,stdout,stderr){
+        child_process.exec('npm install --registry=https://registry.npm.taobao.org', function(err,stdout,stderr) {
             if (err) {
                 console.error(`exec error: ${err}`);
                 console.log('stderr:\n' + stderr);
