@@ -2,7 +2,7 @@
   "repository": {},
   "license": "UNLICENSED",
   "devDependencies": {
-    "androiduix": "^0.6.7",
+    "androiduix": "^0.7.0",
     "jsdom": "^7.2.2",
     "typescript": "^2.0.8"
   },
