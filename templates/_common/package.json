@@ -7,11 +7,12 @@
     "typescript": "^2.0.8"
   },
   "scripts": {
-    "build": "npm run build-install && npm run build-res && npm run build-ts2js",
+    "build": "npm run build-install && npm run build-res && npm run build-ts2es6 && npm run build-ts2es5",
     "postbuild": "echo 'build finish!'",
     "build-install": "echo 'installing dependencies...' && npm install --registry=https://registry.npm.taobao.org",
     "build-res": "echo 'building resource...' && node build_res.js",
-    "build-ts2js": "echo 'converting TypeScript to JS...' && \"node_modules/.bin/tsc\" -p ./",
+    "build-ts2es6": "echo 'converting TypeScript to ES6(for debug)...' && \"node_modules/.bin/tsc\" -p ./tsconfig.es6.json",
+    "build-ts2es5": "echo 'converting TypeScript to ES5...' && \"node_modules/.bin/tsc\" -p ./tsconfig.es5.json",
     "updateSDK": "cd androidui-sdk && node update_sdk.js && cd .."
   }
 }
